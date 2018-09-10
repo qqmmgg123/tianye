@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-cmn-Hans">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+  <meta name="renderer" content="webkit">
+  <meta name="description" content="<%= slogan %>">
+  <title><%= title %></title>
+</head>
+<body>
+  <a href="/<%= comfort.trouble_id %>/comforts">返回</a>
+  <h1><%= appName %></h1>
+  <h3><%= comfort.content || '' %></h3>
+  <form method="post" action="/<%= comfort.id %>/comment">
+    <textarea name="content" placeholder="<%= commentHolder %>" rows="6" autofocus></textarea>
+    <div>
+      <button type="submit">发布</button>
+      <span><%= info %></span>
+    </div>
+  </form>
+  <ol>
+    <% comments.forEach((comment) => { %>
+    <li>
+      <h4><%= comment.content || '' %></h4>
+      <a href="/comment/<%= comment.id %>/replys">
+        <button>回复</button>
+      </a>
+      <hr />
+    </li>
+    <% }) %>
+  </ol>
+  <!--<script src="js/scripts.js"></script>-->
+</body>
+</html>
