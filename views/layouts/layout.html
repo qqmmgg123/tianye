@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-cmn-Hans">
+  <%- include(tempRoot + 'particles/head.html') %>
+<body>
+  <%- include(tempRoot + 'particles/navigation.html') %>
+  <div class="view-area">
+    <%- include(tempRoot + 'particles/header.html') %>
+    <%- include(tempRoot + particles) %>
+  </div>
+  <script>
+    var globalDataStr='<%= globalData %>'
+  </script>
+  <script src="/static/js/global.js"></script>
+  <script src="<%= pageScriptFile %>"></script>
+</body>
+</html>

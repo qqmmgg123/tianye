@@ -1,0 +1,28 @@
+form {
+  padding: 3px 7px 4px;
+  box-sizing: border-box;
+}
+
+.form-group {
+  margin-bottom: 10px;
+  &.code {
+    max-width: 360px;
+    display: flex;
+    label {
+      display: block;
+      flex: 1;
+      &:last-child {
+        margin-left: 5px;
+      }
+    }
+    button {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  }
+  input {
+    width: 100%;
+    max-width: 360px;
+    box-sizing: border-box;
+  }
+}

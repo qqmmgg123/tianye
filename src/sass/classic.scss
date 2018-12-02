@@ -1,0 +1,35 @@
+$gray: black !default;
+
+.content {
+  h3 {
+    font-size: 20px;
+    text-align: center;
+  }
+  blockquote {
+    margin-top: 10px;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 15px;
+    padding-top: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+    border-left: 3px solid #ccc;
+    background-color:#f1f1f1;
+    position: relative;
+    font-size: 14px;
+    color: lighten($gray, 60%);
+  }
+  
+  blockquote::before{
+    content: "\201C";
+    position: absolute;
+    font-size: 14px;
+    left: 5px;
+    top: 10px;
+  }
+
+  .content-viewer {
+    font-size: 16px;
+    margin-top: 10px;
+  }
+}

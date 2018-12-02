@@ -1,0 +1,26 @@
+<div class="requestEditor">
+  <% if (status === 'add' || status === 'deny') { %>
+    <input name="content" maxlength="30" placeholder="说点什么..." />
+  <% } %>
+  <% if (status === 'add' || status === 'accept') { %>
+    <input name="remark" maxlength="24" placeholder="备注名" />
+  <% } %>
+  <% if (status === 'add') { %>
+    <button 
+    type="button"
+    data-id="<%= recipientId %>"
+    rel-ctl="request-send">送出</button>
+  <% } %>
+  <% if (status === 'accept') { %>
+    <button 
+    type="button"
+    data-id="<%= recipientId %>"
+    rel-ctl="accept-confirm">确定</button>
+  <% } %>
+  <% if (status === 'deny') { %>
+    <button 
+    type="button"
+    data-id="<%= recipientId %>"
+    rel-ctl="deny-confirm">确定</button>
+  <% } %>
+</div>

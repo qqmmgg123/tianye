@@ -1,0 +1,19 @@
+<% if (users && users.length) { %>
+<% users.forEach(u => { %>
+<li>
+  <%= u.username %>
+  <% if (u.isfriend) { %>
+    知己
+  <% } else if (user._id.toString() !== u._id.toString()) { %>
+    <button 
+    data-id="<%= user._id %>" 
+    rel-ctl="friend-add"
+    >添加</button>
+  <% } %>
+</li>
+<% }) %>
+<% } else { %>
+  <li>
+    <center><%= noDataTips %></center>
+  </li>
+<% } %>

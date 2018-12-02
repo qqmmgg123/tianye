@@ -1,0 +1,59 @@
+<%- include(tempRoot + 'particles/features.html') %>
+<div class="content">
+  <h3><%= help.content %></h3>
+  <div class="bottom-bar">
+    <a
+    rel-ctl="trouble-reply"
+    data-id="<%= help._id %>" 
+    data-type="trouble"
+    data-pid="<%= help._id %>" 
+    data-ptype="trouble"
+    data-shown="false"
+    href="javascript:;">
+      回复
+    </a>
+    <% if (user && user._id && help.creator_id.toString() === user._id.toString()) { %>
+      <a 
+      data-id="<%= help._id %>" 
+      data-hiding="false" 
+      rel-ctl="trouble-remove"
+      href="javascript:;">已排解</a>
+    <% } %>
+  </div>
+</div>
+<ol id="replies" class="list">
+  <% if (help.replies && help.replies.length) { %>
+    <% help.replies.forEach((reply) => { %>
+    <li class="item fade">
+      <%= reply.remark && reply.remark.toString() || reply.username %>：
+      <%= reply.content %>
+      <div>
+        <a href="/classic/<%= reply.ref_id %>"><h4><%= reply.ref_title || '' %></h4></a>
+        <p><%= reply.ref_summary || '' %></p>
+      </div>
+      <div class="bottom-bar">
+        <% if (user && user.id && reply.creator_id.toString() === user._id.toString()) { %>
+          <a 
+          data-id="<%= reply._id %>" 
+          data-hiding="false" 
+          rel-ctl="reply-remove"
+          href="javascript:;">删除</a>
+        <% } %>
+        <a 
+        rel-ctl="trouble-reply"
+        data-id="<%= reply._id %>" 
+        data-type="reply"
+        data-pid="<%= help._id %>" 
+        data-ptype="trouble" 
+        data-shown="false"
+        href="javascript:;">回复</a>
+      </div>
+    </li>
+    <% }) %>
+  <% } else { %>
+  <li>
+    <center><%= noDataTips %></center>
+  </li>
+  <% } %>
+  <%- include(tempRoot + 'particles/pagination.html') %>
+</ol>

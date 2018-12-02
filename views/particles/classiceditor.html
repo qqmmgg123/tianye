@@ -1,0 +1,30 @@
+<% if (user && (user.administrator || user.super)) { %>
+<div class="editor">
+  <% if (classic && classic._id) { %>
+    <form id="classicForm" method="put"  action="/classic/<%= classic._id %>">
+  <% } else { %>
+    <form id="classicForm" method="post" action="/classic"></form>
+  <% } %>
+    <div class="form-group">
+      <input name="title" placeholder="标题" value="<%= classic && classic.title || '' %>" />
+    </div>
+    <div class="form-group">
+      <textarea name="summary" placeholder="摘要"><%= classic && classic.summary || '' %></textarea>
+    </div>
+    <div class="form-group">
+      <div id="editor" class="pell"></div>
+      <textarea style="display: none;" id="html-output" name="content" rows="6" autofocus><%- classic && classic.content || '' %></textarea>
+    </div>
+    <div class="bottom-bar">
+      <button type="submit">
+      <% if (classic && classic.title) { %>
+        更新
+      <% } else { %>
+        发布
+      <% } %>
+      </button>
+      <span><%= info %></span>
+    </div>
+  </form>
+</div>
+<% } %>

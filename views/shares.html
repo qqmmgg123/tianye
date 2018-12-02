@@ -1,0 +1,38 @@
+<%- include(tempRoot + 'particles/features.html') %>
+<div class="editor">
+  <form method="post" action="/share">
+    <div class="form-group">
+      <div><%= shareColumnHolder %></div>
+      <ol id="columnSelector" class="share-type-selector">
+        <% for (let [key, column] of Object.entries(columns)) { %>
+          <li data-id="<%= column.id %>" rel-ctl="column-select"><%= column.name %></li>
+        <% } %>
+      </ol>
+      <select id="shareTypeSelector" name="column_id" style="display: none;">
+        <option><%= shareColumnHolder %></option>
+        <% for (let [key, column] of Object.entries(columns)) { %>
+          <option value="<%= column.id %>"><%= column.name %></option>
+        <% } %>
+      </select>
+    </div>
+    <div style="display: none;" id="shareEditor"></div>
+  </form>
+</div>
+<div id="column-nav" class="columns">
+  <a 
+  data-id="all" 
+  data-hiding="false" 
+  rel-ctl="column-nav-switch" 
+  href="javascript:;">全部</a>
+  <% for (let [key, column] of Object.entries(columns)) { %>
+    <a 
+    data-id="<%= column.id %>" 
+    data-hiding="false" 
+    rel-ctl="column-nav-switch" 
+    href="javascript:;"><%= column.name %></a>
+  <% } %>
+</div>
+<ol id="shares" class="list">
+  <%- include(tempRoot + 'particles/sharelist.html') %>
+  <%- include(tempRoot + 'particles/pagination.html') %>
+</ol>

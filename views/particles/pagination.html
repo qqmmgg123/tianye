@@ -1,0 +1,15 @@
+<li class="pagination">
+  <% if (pageInfo.prevPage) { %>
+  <a class="page-num" href="?page=<%= pageInfo.precPage %>">上一页</a>
+  <% } %>
+  <% pageInfo.pages.forEach((page) => { %>
+  <% if (pageInfo.currPage === page) { %>
+  <a class="page-num current" href="?page=<%= page %>"><%= page %></a>
+  <% } else { %>
+  <a class="page-num" href="?page=<%= page %>"><%= page %></a>
+  <% } %>
+  <% }) %>
+  <% if (pageInfo.nextPage) { %>
+  <a class="page-num" href="?page=<%= pageInfo.nextPage %>">下一页</a>
+  <% } %>
+</li>

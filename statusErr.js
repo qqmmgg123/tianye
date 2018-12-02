@@ -5,17 +5,34 @@ module.exports = async (ctx, next) => {
       ctx.throw(404);
     }
   } catch (err) {
-    console.log(err)
     if (err.name === 'ValidationError') {
-      ctx.session.info = err.message.split(':')[2]
-      ctx.redirect(ctx.session.currentFormUrl || '/')
+      console.log('验证错误了..........', ctx.state.isXhr)
+      
+      if (!ctx.state.isXhr) {
+        ctx.session.info = err.message.split(':')[2]
+        ctx.redirect(ctx.session.currentFormUrl || '/')
+      } else {
+        ctx.body = {
+          success: false,
+          info: err.message.split(':')[2]
+        }
+      }
     } else {
+      console.error(err)
       const status = err.status || 500;
       ctx.status = status;
-      if (status === 404) {
-        ctx.body = '<h1>404!</h1>'
-      } else if (status === 500) {
-        ctx.body = '<h1>500!</h1>'
+      if (!ctx.state.isXhr) {
+        if (status === 404) {
+          ctx.body = '<h1>404!</h1>'
+        } else if (status === 500) {
+          ctx.body = '<h1>500!</h1>'
+        }
+      } else {
+        ctx.body = {
+          success: false,
+          code: 1001,
+          message: err.message
+        }
       }
     }
   }

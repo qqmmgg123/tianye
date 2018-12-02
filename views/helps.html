@@ -1,0 +1,92 @@
+<%- include(tempRoot + 'particles/features.html') %>
+<div class="editor">
+  <form method="post" action="/trouble">
+    <textarea name="content" placeholder="<%= troubleHolder %>" rows="6" autofocus></textarea>
+    <div class="bottom-bar">
+      <div class="info-tips"><%= info || '' %></div>
+      <div class="allowed">
+        <div class="tips">
+          <span>知己可见</span>
+          <i class="iconfont icon-suoding"></i>
+        </div>
+      </div>
+      <button type="submit">诉出</button>
+    </div>
+  </form>
+</div>
+<ol id="my-troubles" class="list">
+  <% if (relations.length ) { %>
+  <% relations.forEach((relation) => { %>
+  <li class="item fade">
+    <blockquote>
+      <em><%= relation.remark && relation.remark.toString() || relation.username %></em>
+      <h3><%= relation.content || '' %></h3>
+    </blockquote>
+    <div class="bottom-bar">
+      <a
+      rel-ctl="trouble-reply"
+      data-id="<%= relation._id %>" 
+      data-type="trouble"
+      data-pid="<%= relation._id %>" 
+      data-ptype="trouble"
+      data-ruid="<%= relation.creator_id %>"
+      data-shown="false"
+      href="javascript:;">
+        回复
+      </a>
+      <% if (relation.creator_id.equals(user.id)) { %>
+        <a 
+        data-id="<%= relation._id %>" 
+        data-hiding="false" 
+        rel-ctl="trouble-remove"
+        href="javascript:;">已排解</a>
+      <% } %>
+    </div>
+    <% if (relation.replies && relation.replies.length) { %>
+    <ol class="replies">
+      <% relation.replies.forEach((reply) => { %>
+      <li class="item fade">
+        <%= reply.remark && reply.remark.toString() || reply.username %>
+        <% if (reply.reply_type === 'reply') { %>
+          @ <%= reply.receivername %>
+        <% } %>
+        ：<%= reply.content %>
+        <div>
+          <a href="/classic/<%= reply.ref_id %>"><h4><%= reply.ref_title || '' %></h4></a>
+          <p><%= reply.ref_summary || '' %></p>
+        </div>
+        <div class="bottom-bar">
+          <% if (user && user.id && reply.creator_id.toString() === user._id.toString()) { %>
+            <a 
+            data-id="<%= reply._id %>" 
+            data-hiding="false" 
+            rel-ctl="reply-remove"
+            href="javascript:;">删除</a>
+          <% } %>
+          <a 
+          rel-ctl="trouble-reply"
+          data-id="<%= reply._id %>" 
+          data-type="reply"
+          data-pid="<%= relation._id %>" 
+          data-ptype="trouble" 
+          data-ruid="<%= reply.creator_id %>"
+          data-shown="false"
+          href="javascript:;">回复</a>
+        </div>
+      </li>
+      <% }) %>
+    </ol>
+    <% if (relation.reply_count > 5) { %>
+    <div><a href="/help/<%= relation._id %>">更多 <%= relation.reply_count - 5 %> 条</a></div>
+    <% } %>
+    <% } %>
+    <hr />
+  </li>
+  <% }) %>
+  <% } else { %>
+  <li>
+    <center><%= noDataTips %></center>
+  </li>
+  <% } %>
+  <%- include(tempRoot + 'particles/pagination.html') %>
+</ol>

@@ -1,0 +1,35 @@
+<%- include(tempRoot + 'particles/features.html') %>
+<%- include(tempRoot + 'particles/classiceditor.html') %>
+<ol id="classics" class="list">
+  <% classics.forEach((classic) => { %>
+  <li class="item fade">
+    <%- include(tempRoot + 'particles/classicref.html', { classic }) %>
+    <div class="bottom-bar">
+      <a
+      rel-ctl="classic-recommend"
+      data-id="<%= classic._id %>" 
+      data-shown="false"
+      href="javascript:;">
+        推荐
+      </a>
+      <% if (user && user._id) { %>
+        <% if (classic.creator_id.toString() === user._id.toString()) { %>
+          <a href="/classic/<%= classic._id %>/modify">
+            编辑
+          </a>
+          <a 
+          rel-ctl="classic-remove"
+          data-hiding="false" 
+          data-id="<%= classic._id %>" 
+          href="javascript:;">
+            删除
+          </a>
+        <% } %>
+      <% } %>
+    </div>
+    <hr />
+  </li>
+  <% }) %>
+  <%- include(tempRoot + 'particles/pagination.html') %>
+</ol>
+<script src="/static/js/classic.js"></script>
