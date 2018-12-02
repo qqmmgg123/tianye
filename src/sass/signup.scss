@@ -1,11 +1,19 @@
+$gray: black !default;
+
 form {
   padding: 3px 7px 4px;
   box-sizing: border-box;
+  .server-info, .vcode-info {
+    padding: 3px 7px 4px;
+    box-sizing: border-box;
+    color: red;
+    font-size: 14px;
+  }
 }
 
 .form-group {
   margin-bottom: 10px;
-  &.code {
+  .code {
     max-width: 360px;
     display: flex;
     label {

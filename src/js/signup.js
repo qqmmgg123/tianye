@@ -1,13 +1,7 @@
 import '@babel/polyfill'
 import { post } from './lib/request'
-import ejs from 'ejs'
 
 globalData.codeBtnDis = false
-let globalObject = document.querySelector('form')
-
-// 组件开始
-import signupTempHtml from '../../views/signup.html'
-let signupTemp = ejs.compile(signupTempHtml)
 
 // 事件触发
 document.body.addEventListener('input', (e) => {
@@ -38,20 +32,24 @@ document.body.addEventListener('click', async (e) => {
       let time = 30
       let timer = null
       el.innerHTML = `<span>30</span>秒后重发`
+      document.querySelector('.vcode-info').innerHTML = '验证码发送成功，有效时间10分钟'
+      document.querySelector('.vcode-info').style.display = ''
       globalData.codeBtnDis = true
       el.disabled = true
       timer = setInterval(() => {
-        if (time <= 0) {
+        if (time >= 0) {
           el.querySelector('span').innerHTML = time--
         } else {
           el.innerHTML = '重新发送'
           globalData.codeBtnDis = false
           el.disabled = false
+          clearInterval(timer)
+          timer = null
         }
       }, 1000)
     } else {
       globalData.info = res.info
-      globalObject.innerHTML = signupTemp(globalData)
+      document.querySelector('.server-info').innerHTML = res.info
     }
   } else if (el.matches('button[type=submit]')) {
     e.preventDefault()
@@ -68,7 +66,7 @@ document.body.addEventListener('click', async (e) => {
       }
     } else {
       globalData.info = res.info
-      globalObject.innerHTML = signupTemp(globalData)
+      document.querySelector('.server-info').innerHTML = res.info
     }
   }
 }, false)

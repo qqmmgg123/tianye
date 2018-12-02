@@ -15,14 +15,17 @@
       <input placeholder="<%= emailHolder %>" type="email" name="email" value="<%= email %>" autocomplete="off" />
     </label>
   </p>
-  <p class="form-group code">
-    <label>
-      <input type="text" name="code" placeholder="请输入验证码 ..." value="<%= code %>" id="code" />
-    </label>
-    <label>
-      <button rel-ctl="sendCode">发送验证码</button>
-    </label>
-  </p>
+  <div class="form-group">
+    <div  class="vcode-info"></div>
+    <div class="code">
+      <label>
+        <input type="text" name="code" placeholder="请输入验证码 ..." value="<%= code %>" id="code" />
+      </label>
+      <label>
+        <button rel-ctl="sendCode">发送验证码</button>
+      </label>
+    </div>
+  </div>
   <p class="form-group">
     <button type="submit">注册</button>
     <a href="/login">已有账号，登录</a>

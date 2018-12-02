@@ -287,8 +287,8 @@ router.get('/signup', async (ctx) => {
 // 注册
 router.post('/signup', async (ctx, next) => {
   let { 
-    username = '', 
-    password = '',
+    username = '裘大钢', 
+    password = 'qnmdwbd0000',
     email = '', 
     code = ''
   } = ctx.request.body
@@ -343,6 +343,7 @@ router.post('/signup', async (ctx, next) => {
       code: code
     })
     return passport.authenticate('local', (err, user, info, status) => {
+      console.log(err)
       if (err) {
         ctx.body = {
           success: false,
@@ -381,7 +382,7 @@ router.post('/signup', async (ctx, next) => {
           })
         }
       }
-    })
+    })(ctx)
   }
 })
 
