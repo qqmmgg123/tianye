@@ -1,0 +1,13 @@
+form {
+  padding: 3px 7px 4px;
+  box-sizing: border-box;
+}
+
+.form-group {
+  margin-bottom: 10px;
+  input {
+    width: 100%;
+    max-width: 360px;
+    box-sizing: border-box;
+  }
+}

@@ -1,0 +1,25 @@
+let Schema = require('mongoose').Schema;
+
+let thankSchema = new Schema({
+  giver_id: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'User', 
+    alias: 'giver',
+    required: true 
+  },
+  winner_id: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'User', 
+    alias: 'winner', 
+    required: true 
+  },
+  basis_id: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'Share', 
+    alias: 'basis', 
+    required: true 
+  },
+  given_date: { type: Date, default: Date.now }
+})
+
+module.exports = thankSchema

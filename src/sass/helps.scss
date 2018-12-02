@@ -1,0 +1,66 @@
+$gray: black !default;
+
+.editor {
+  textarea {
+    height: 60px;
+  }
+  .bottom-bar {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    .info-tips {
+      flex: 1;
+    }
+    .allowed {
+      .tips {
+        margin-right: 5px;
+        color: lighten($gray, 68%);
+        border-radius: 3px;
+        background-color: lighten($gray, 95%);
+        border: 1px solid lighten($gray, 90%);
+        padding: 3px 7px 4px;
+        span, .iconfont {
+          height: 12px;
+          line-height: 12px;
+          vertical-align: middle;
+        }
+        .iconfont {
+          color: lighten($gray, 72%);
+        }
+      } 
+    }
+  }
+}
+
+.replyEditor {
+  textarea {
+    height: 60px;
+  }
+  .bottom-bar {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    .info-tips {
+      flex: 1;
+    }
+  }
+}
+
+ol.list {
+  > li.item {
+    blockquote {
+      h3 {
+        font-size: 16px;
+      }
+      em {
+        font-style: normal;
+        color: lighten($gray, 60%);
+      }
+    }
+    ol.replies {
+      border: 1px solid lighten($gray, 90%);
+      border-radius: 3px;
+      padding: 3px 7px 4px;
+    }
+  }
+}

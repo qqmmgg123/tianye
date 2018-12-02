@@ -1,0 +1,27 @@
+.config-panel {
+  padding: 3px 7px 4px;
+  font-size: 14px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+  .field {
+    padding: 3px 7px 4px;
+    display: flex;
+    .label {
+      width: 58px;
+      height: 24px;
+      text-align: justify;
+      &:after{
+        content:'.';
+        width: 100%;
+        display: inline-block;
+        overflow: hidden;
+        height: 0;
+      }
+    }
+    .value:before {
+      content:'：';
+    }
+  }
+}

@@ -1,0 +1,19 @@
+<div class="features">
+  <% for (let [key, value] of Object.entries(features)) { %>
+    <% if (key === 'DIARY') { %>
+      <% if (user) { %>
+        <a href="/features/<%= key.toLowerCase() %>">
+          <%= value || '' %>
+        </a>
+      <% } %>
+    <% } else if (key === 'HELP') { %>
+      <% if (user) { %>
+        <a href="/features/<%= key.toLowerCase() %>">
+          <%= value || '' %>
+        </a>
+      <% } %>
+    <% } else { %>
+      <a href="/features/<%= key.toLowerCase() %>"><%= value || '' %></a>
+    <% } %>
+  <% } %>
+</div>

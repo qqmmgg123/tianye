@@ -1,30 +1,30 @@
-<!doctype html>
-<html lang="zh-cmn-Hans">
-<head>
-  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
-  <meta name="renderer" content="webkit">
-  <meta name="description" content="<%= slogan %>">
-  <title><%= title %></title>
-</head>
-<body>
-  <form action="/signup" method="post">
-    <p><%= info %></p>
-    <p>
-      <label>
-        <input placeholder="<%= usernameHolder %>" name="username" autocomplete="off" />
-      </label>
-    </p>
-    <p>
-      <label>
-        <input placeholder="<%= passwordHolder %>" type="password" name="password" autocomplete="off" />
-      </label>
-    </p>
-    <p>
-      <button type="submit">注册</button>
-      <a href="/login">已有账号，去登录~</a>
-    </p>
-  </form>
-</body>
-</html>
+<form action="/signup" method="post">
+  <p class="server-info"><%= info %></p>
+  <p class="form-group">
+    <label>
+      <input placeholder="<%= usernameHolder %>" name="username" value="<%= username %>" autocomplete="off" />
+    </label>
+  </p>
+  <p class="form-group">
+    <label>
+      <input placeholder="<%= passwordHolder %>" type="password" name="password" value="<%= password %>" autocomplete="off" />
+    </label>
+  </p>
+  <p class="form-group">
+    <label>
+      <input placeholder="<%= emailHolder %>" type="email" name="email" value="<%= email %>" autocomplete="off" />
+    </label>
+  </p>
+  <p class="form-group code">
+    <label>
+      <input type="text" name="code" placeholder="请输入验证码 ..." value="<%= code %>" id="code" />
+    </label>
+    <label>
+      <button rel-ctl="sendCode">发送验证码</button>
+    </label>
+  </p>
+  <p class="form-group">
+    <button type="submit">注册</button>
+    <a href="/login">已有账号，登录</a>
+  </p>
+</form>

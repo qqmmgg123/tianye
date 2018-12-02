@@ -1,0 +1,76 @@
+$gray: black !default;
+
+.editor {
+  .form-group {
+    margin-bottom: 10px;
+    ol.share-type-selector {
+      display: flex;
+      justify-content: flex-start;
+      li {
+        margin-right: 10px;
+        font-size: 14px;
+        padding: 3px 7px 4px;
+        border: 1px solid lighten($gray, 68%);
+        border-radius: 3px;
+      }
+    }
+    input, textarea {
+      width: 100%;
+      max-width: 360px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 60px;
+    }
+  }
+  .bottom-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 360px;
+    .info-tips {
+      flex: 1;
+    }
+    .allowed {
+      .tips {
+        margin-right: 5px;
+        border-radius: 3px;
+        color: lighten($gray, 68%);
+        background-color: lighten($gray, 95%);
+        border: 1px solid lighten($gray, 90%);
+        padding: 3px 7px 4px;
+        span, .iconfont {
+          height: 12px;
+          line-height: 12px;
+          vertical-align: middle;
+        }
+        .iconfont {
+          color: lighten($gray, 72%);
+        }
+      } 
+    }
+  }
+}
+
+ol.list {
+  > li.item {
+    blockquote {
+      h3 {
+        font-size: 16px;
+      }
+      p {
+        font-size: 14px;
+        color: lighten($gray, 30%);
+      }
+      em {
+        font-style: normal;
+        color: lighten($gray, 60%);
+      }
+    }
+    ol.replies {
+      border: 1px solid lighten($gray, 90%);
+      border-radius: 3px;
+      padding: 3px 7px 4px;
+    }
+  }
+}

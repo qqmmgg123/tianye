@@ -1,0 +1,22 @@
+$gray: black !default;
+
+@import './particles/classiceditor.scss';
+
+ol.list {
+  > li.item {
+    blockquote {
+      h3 {
+        font-size: 16px;
+        white-space: normal;
+      }
+      p {
+        font-size: 14px;
+        color: lighten($gray, 60%);
+      }
+    }
+    .bottom-bar {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+}

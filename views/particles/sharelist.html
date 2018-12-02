@@ -1,0 +1,44 @@
+<% shares.forEach((share) => { %>
+<li class="item fade">
+  <blockquote>
+    <% if (share.title) { %>
+    <a href="/share/<%= share._id %>"><h3><%= share.title || '' %></h3></a>
+    <% } %>
+    <p><%= share.content || '' %></p>
+    <em><%= share.name || '' %></em>
+  </blockquote>
+  <div class="bottom-bar">
+    <% if (!share.isThanked) { %>
+      <a 
+      data-id="<%= share._id %>" 
+      rel-ctl="share-thank" 
+      href="javascript:;">
+        感恩
+      </a>
+    <% } else { %>
+      已感恩
+    <% } %>
+    <% if (user && user._id) { %>
+    <% if (share.creator_id.toString() === user._id.toString()) { %>
+    <a href="/share/<%= share._id %>/modify">
+      编辑
+    </a>
+    <a 
+    rel-ctl="share-remove"
+    data-hiding="false" 
+    data-id="<%= share._id %>" 
+    href="javascript:;">
+      删除
+    </a>
+    <% } %>
+    <% } %>
+    <a 
+    rel-ctl="share-report"
+    data-id="<%= share._id %>" 
+    href="javascript:;">
+      举报
+    </a>
+  </div>
+  <hr />
+</li>
+<% }) %>

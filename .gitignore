@@ -1,4 +1,6 @@
+ui
 data
+views/baks
 node_modules
 dist
 access.log
