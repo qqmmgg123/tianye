@@ -13,12 +13,8 @@ const path = require('path');
 const runSequence = require('run-sequence');
 const webpackStream = require('webpack-stream');
 const webpackConfig = require('./webpack.config.js');
-
-gulp.task('js', () => {
-  gulp.src('./src/js/index.js')
-    .pipe(webpackStream(webpackConfig), webpack)
-    .pipe(gulp.dest('./dist/js'));
-});
+const glob = require('glob');
+const es = require('event-stream');
 
 let currentFileName = ''
 
@@ -35,6 +31,17 @@ function scripts(filename) {
   }
 }
 
+function scss(filename) {
+  return () => {
+    return gulp.src(`src/sass/${filename}`)
+    .pipe(plumber())
+    .pipe(sass({ outputStyle: 'compressed' }))
+    .pipe(gulp.dest('dist/css'))
+    .pipe(browserSync.stream())
+      // .on('end', browserSync.reload)
+  }
+}
+
 /*function scripts(filename) {
   return () => {
     return gulp.src(`src/js/${filename}`)
@@ -44,20 +51,32 @@ function scripts(filename) {
   }
 }*/
 
-gulp.task('scripts', scripts('classic.js'))
+gulp.task('scripts', (done) => {
+  glob('src/js/*.js', function(err, files) {
+    if (err) done(err);
+    let tasks = files.map((entry) => {
+      return browserify(entry)
+      .transform('babelify')
+      .bundle()
+      .pipe(source(path.basename(entry)))
+      .pipe(buffer())
+      .pipe(gulp.dest('dist/js'));
+    })
+    es.merge(tasks).on('end', done);
+  })
+})
 
-gulp.task('sass', () => {
+gulp.task('scss', (done) => {
   return gulp.src('src/sass/*.scss')
     .pipe(plumber())
     .pipe(sass({ outputStyle: 'compressed' }))
     .pipe(gulp.dest('dist/css'))
-    .pipe(browserSync.stream())
+    .on('end', done)
 })
 
 gulp.task("serve", (done) => {
   browserSync.init({
     files: [
-      //'views/*.html',
       'views/**/*.html'
     ],
     server: false,
@@ -67,8 +86,11 @@ gulp.task("serve", (done) => {
   }, done)
 })
 
-gulp.task('watch:sass', () => {
-  return gulp.watch('./src/sass/*.scss', gulp.series('sass'))
+gulp.task('watch:scss', () => {
+  return watch('./src/sass/*.scss', (file) => {
+    const name = path.basename(file.path)
+    sass(name)()
+  })
 })
 
 gulp.task('watch:es6', () => {
@@ -78,6 +100,8 @@ gulp.task('watch:es6', () => {
   })
 })
 
-gulp.task('watch', gulp.parallel('watch:es6', 'watch:sass'))
+gulp.task('watch', gulp.parallel('watch:es6', 'watch:scss'))
 
-gulp.task('default', gulp.series('scripts', 'serve', 'watch'))
+gulp.task('default', gulp.series('scripts', 'scss', 'serve', 'watch'))
+
+gulp.task('build', gulp.series('scripts', 'scss'))
