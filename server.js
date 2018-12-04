@@ -56,7 +56,7 @@ const port = process.env.PORT || 3000
 //连接mongodb 数据库 ，地址为mongodb的地址以及集合名称。
 mongoose.Promise = global.Promise;
 mongoose.set('useCreateIndex', true)
-mongoose.connect('mongodb://localhost/tianye', { useNewUrlParser: true })
+mongoose.connect('mongodb://localhost/tianyedb', { useNewUrlParser: true })
 
 // trust proxy
 app.proxy = true
