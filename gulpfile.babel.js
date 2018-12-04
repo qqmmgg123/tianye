@@ -49,7 +49,7 @@ gulp.task('scripts', scripts('classic.js'))
 gulp.task('sass', () => {
   return gulp.src('src/sass/*.scss')
     .pipe(plumber())
-    .pipe(sass())
+    .pipe(sass({ outputStyle: 'compressed' }))
     .pipe(gulp.dest('dist/css'))
     .pipe(browserSync.stream())
 })
