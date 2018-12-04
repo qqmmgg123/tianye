@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const Koa = require('koa')
 const Router = require('koa-router')
 const views = require('koa-views')
@@ -53,6 +55,7 @@ const app = new Koa()
 const router = new Router()
 
 const port = process.env.PORT || 3000
+
 //连接mongodb 数据库 ，地址为mongodb的地址以及集合名称。
 mongoose.Promise = global.Promise;
 mongoose.set('useCreateIndex', true)
@@ -287,8 +290,8 @@ router.get('/signup', async (ctx) => {
 // 注册
 router.post('/signup', async (ctx, next) => {
   let { 
-    username = '', 
-    password = '',
+    username = '裘大钢', 
+    password = 'qnmdwbd0000',
     email = '', 
     code = ''
   } = ctx.request.body
@@ -1923,7 +1926,6 @@ router.delete('/reply/:id', async (ctx, next) => {
 app
   .use(router.routes())
   .use(router.allowedMethods())
-
 
 app.listen(port, () => {
   console.log(`Tianye app starting at port ${port}`)
