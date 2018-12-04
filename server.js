@@ -287,8 +287,8 @@ router.get('/signup', async (ctx) => {
 // 注册
 router.post('/signup', async (ctx, next) => {
   let { 
-    username = '裘大钢', 
-    password = 'qnmdwbd0000',
+    username = '', 
+    password = '',
     email = '', 
     code = ''
   } = ctx.request.body
