@@ -3,7 +3,7 @@
   <% if (classic && classic._id) { %>
     <form id="classicForm" method="put"  action="/classic/<%= classic._id %>">
   <% } else { %>
-    <form id="classicForm" method="post" action="/classic"></form>
+    <form id="classicForm" method="post" action="/classic">
   <% } %>
     <div class="form-group">
       <input name="title" placeholder="标题" value="<%= classic && classic.title || '' %>" />
