@@ -44,6 +44,7 @@ const constant = {
   OTHER_FRIEND_REQUESTING: '您已经发起了将对方添加为{{FRIEND_NAME}}的申请',
   NO_DIARYS: '当前没有内容。',
   NO_CLASSICS: '当前没有内容。',
+  NO_USER_RESULT: '抱歉，未找到该用户~',
 
   // 操作提示
   FRIEND_EXISTS: '对方已经是你{{FRIEND_NAME}}了',

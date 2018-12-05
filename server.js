@@ -591,6 +591,7 @@ router.get('/user/search', async (ctx, next) => {
   // 返回并渲染首页
   ctx.body = {
     success: true,
+    noUserResult: constant.NO_USER_RESULT,
     pageInfo: {
       currPage: page,
       prevPage: page > 1 ? page - 1 : 0,
@@ -603,8 +604,6 @@ router.get('/user/search', async (ctx, next) => {
     users,
     info
   }
-
-  ctx.session.info = null
 })
 
 // 心情杂记
