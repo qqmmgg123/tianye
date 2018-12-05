@@ -65,8 +65,8 @@ const constant = {
   FEATURES: {
     DIARY: '心情杂记',
     HELP: '排忧解难',
-    SHARE: '心得体会', // '原创分享',
-    CLASSIC: '引经据典',
+    SHARE: '心得感悟', // '原创分享',
+    CLASSIC: '著作经典',
   },
 
   // 版块
