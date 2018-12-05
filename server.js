@@ -55,11 +55,12 @@ const app = new Koa()
 const router = new Router()
 
 const port = process.env.PORT || 3000
+const dbLink = process.env.DBLINK || 'mongodb://localhost:27018/tianye'
 
 //连接mongodb 数据库 ，地址为mongodb的地址以及集合名称。
 mongoose.Promise = global.Promise;
 mongoose.set('useCreateIndex', true)
-mongoose.connect('mongodb://localhost:27018/tianye', { useNewUrlParser: true })
+mongoose.connect(dbLink, { useNewUrlParser: true })
 
 // trust proxy
 app.proxy = true
