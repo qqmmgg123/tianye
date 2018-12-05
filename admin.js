@@ -1,3 +1,4 @@
+require('dotenv').config()
 const program = require('commander')
 const mongoose = require('mongoose')
 const User = require('./models/user')
