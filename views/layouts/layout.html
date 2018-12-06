@@ -2,10 +2,11 @@
 <html lang="zh-cmn-Hans">
   <%- include(tempRoot + 'particles/head.html') %>
 <body>
-  <%- include(tempRoot + 'particles/navigation.html') %>
-  <div class="view-area">
-    <%- include(tempRoot + 'particles/header.html') %>
-    <%- include(tempRoot + particles) %>
+  <%- include(tempRoot + 'particles/header.html') %>
+  <div class="main">
+    <div class="view-area">
+      <%- include(tempRoot + particles) %>
+    </div>
   </div>
   <script>
     var globalDataStr='<%= globalData %>'

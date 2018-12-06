@@ -89,7 +89,7 @@ gulp.task("serve", (done) => {
 gulp.task('watch:scss', () => {
   return watch('./src/sass/*.scss', (file) => {
     const name = path.basename(file.path)
-    sass(name)()
+    scss(name)()
   })
 })
 

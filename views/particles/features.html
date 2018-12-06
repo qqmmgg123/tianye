@@ -5,15 +5,20 @@
         <a href="/features/<%= key.toLowerCase() %>">
           <%= value || '' %>
         </a>
+        <div class="split-line"></div>
       <% } %>
     <% } else if (key === 'HELP') { %>
       <% if (user) { %>
         <a href="/features/<%= key.toLowerCase() %>">
           <%= value || '' %>
         </a>
+        <div class="split-line"></div>
       <% } %>
+    <% } else if (key === 'CLASSIC') { %>
+      <a href="/features/<%= key.toLowerCase() %>"><%= value || '' %></a>
     <% } else { %>
       <a href="/features/<%= key.toLowerCase() %>"><%= value || '' %></a>
+      <div class="split-line"></div>
     <% } %>
   <% } %>
 </div>

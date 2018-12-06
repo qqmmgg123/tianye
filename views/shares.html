@@ -2,7 +2,7 @@
 <div class="editor">
   <form method="post" action="/share">
     <div class="form-group">
-      <div><%= shareColumnHolder %></div>
+      <div class="help-info"><%= shareColumnHolder %></div>
       <ol id="columnSelector" class="share-type-selector">
         <% for (let [key, column] of Object.entries(columns)) { %>
           <li data-id="<%= column.id %>" rel-ctl="column-select"><%= column.name %></li>
