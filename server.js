@@ -1080,7 +1080,7 @@ router.get('/features/share', async (ctx, next) => {
     return share
   })
 
-  // 感恩状态
+  // 赞叹状态
   let { user } = ctx.state
   if (user && user.id) {
     let shareIds = shares.map(share => share._id)
@@ -1155,7 +1155,7 @@ router.get('/column/:id', async (ctx, next) => {
     })
   }
 
-  // 感恩状态
+  // 赞叹状态
   let { user } = ctx.state
   if (user && user.id) {
     let shareIds = shares.map(share => share._id)
@@ -1510,7 +1510,7 @@ router.put('/classic/:id', async (ctx) => {
   }
 })
 
-// 感恩
+// 赞叹
 router.post('/thank/:shareId', async (ctx, next) => {
   const { shareId } = ctx.params
   const { user } = ctx.state

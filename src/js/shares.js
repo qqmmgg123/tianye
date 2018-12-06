@@ -32,7 +32,7 @@ shareList.addEventListener('click', async (e) => {
     let shareId = el.dataset && el.dataset.id || el.getAttribute('data-id')
     let res = await post(`/thank/${shareId}`)
     if (res.success) {
-      el.outerHTML = '已感恩'
+      el.outerHTML = '已赞叹'
     }
   } else if (el.matches('[rel-ctl="share-remove"]')) {
     let hiding = ((el.dataset && el.dataset.hiding || el.getAttribute('data-hiding')) === 'true')
