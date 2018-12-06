@@ -3,7 +3,7 @@ body {
   font: 12px/1.8 Helvetica,Arial,sans-serif;
   color: #333333;
 }
-body, h3, p {
+body, h1, h2, h3, p {
   margin: 0;
   padding: 0;
 }
@@ -90,7 +90,7 @@ button, .button, .page-num {
     color: red;
   }
 }
-.button {
+.button, .page-num {
   font-size: 12px;
   text-decoration: none;
   display: inline-block;
@@ -100,39 +100,90 @@ a.button {
   color: #666666;
 }
 nav {
+  background-color: white;
   a {
-    display: inline-block;
     line-height: 22px;
     padding: 3px 7px 4px;
-    font-size: 12px;
+    font-size: 14px;
+    margin-right: 20px;
   }
 }
 header {
-  padding: 3px 7px 4px;
-  h1, h2 {
-    display: inline;
-    font-weight: normal;
+  border-bottom: 1px solid lighten($gray, 90%);
+  .head-inner {
+    padding: 3px 7px 4px;
+    max-width: $viewWidth;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    i.iconfont {
+      font-size: 24px;
+      display: none;
+      cursor: pointer;
+    }
+    h1, h2 {
+      display: inline;
+      font-weight: normal;
+    }
+    h1 {
+      color: red;
+    }
+    h2 {
+      color: orange;
+      margin-left: 10px;
+    }
   }
-  h1 {
-    color: red;
+}
+@media screen and (max-width: $viewWidth) {
+  nav {
+    display: none;
+    border-bottom: 1px solid lighten($gray, 90%);
+    justify-content: flex-end;
+    width: 100%;
+    position: absolute;
+    top: 100%;
   }
-  h2 {
-    color: orange;
-    margin-left: 10px;
+  header {
+    .head-inner {
+      position: relative;
+      i.iconfont {
+        display: inline;
+      }
+    }
   }
 }
 .crumbs {
   padding: 3px 7px 4px;
 }
-.view-area {
-  max-width: 960px;
-  margin: auto;
+.main {
+  margin-top: 20px;
+  flex: 1;
+  .view-area {
+    max-width: $viewWidth;
+    margin: auto;
+  }
 }
 .features {
+  margin-top: 20px;
   padding: 3px 7px 4px;
+  display: flex;
+  align-items: center;
   a {
+    flex: 1;
+    font-size: 14px;
     margin-right: 10px;
     font-size: 14px;
+    display: block;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+  }
+  .split-line {
+    width: 1px;
+    height: 20px;
+    background-color: lighten($gray, 80%);
   }
 }
 .content {
@@ -148,6 +199,7 @@ header {
   }
 }
 .editor, .searchBar {
+  margin-top: 10px;
   padding: 3px 7px 4px;
   .form-tips {
     margin: 7px 0;

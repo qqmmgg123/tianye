@@ -14,7 +14,7 @@
     }
     input, textarea, .rich-textarea {
       width: 100%;
-      max-width: 360px;
+      /*max-width: 360px;*/
       box-sizing: border-box;
     }
     textarea {
@@ -28,7 +28,7 @@
     display: flex;
     align-items: center;
     width: 100%;
-    max-width: 360px;
+    /*max-width: 360px;*/
     .info-tips {
       flex: 1;
     }

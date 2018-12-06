@@ -1,5 +1,7 @@
 @import 'common.scss';
 form {
+  margin: auto;
+  max-width: 360px;
   padding: 3px 7px 4px;
   box-sizing: border-box;
   .server-info, .vcode-info {
@@ -14,7 +16,6 @@ form {
 .form-group {
   margin-bottom: 10px;
   .code {
-    max-width: 360px;
     display: flex;
     label {
       display: block;
@@ -24,7 +25,6 @@ form {
       }
     }
     button {
-      width: 100%;
       box-sizing: border-box;
     }
   }
