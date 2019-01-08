@@ -15,6 +15,7 @@ const webpackStream = require('webpack-stream');
 const webpackConfig = require('./webpack.config.js');
 const glob = require('glob');
 const es = require('event-stream');
+const sourcemaps = require('gulp-sourcemaps');
 
 let currentFileName = ''
 
@@ -25,6 +26,8 @@ function scripts(filename) {
       .bundle()
       .pipe(source(filename))
       .pipe(buffer())
+      .pipe(sourcemaps.init({loadMaps: true}))
+      .pipe(sourcemaps.write('./'))
       .pipe(gulp.dest('dist/js'))
       .pipe(browserSync.stream())
       // .on('end', browserSync.reload)
@@ -60,6 +63,8 @@ gulp.task('scripts', (done) => {
       .bundle()
       .pipe(source(path.basename(entry)))
       .pipe(buffer())
+      .pipe(sourcemaps.init({loadMaps: true}))
+      .pipe(sourcemaps.write('./'))
       .pipe(gulp.dest('dist/js'));
     })
     es.merge(tasks).on('end', done);

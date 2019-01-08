@@ -6,8 +6,6 @@ module.exports = async (ctx, next) => {
     }
   } catch (err) {
     if (err.name === 'ValidationError') {
-      console.log('验证错误了..........', ctx.state.isXhr)
-      
       if (!ctx.state.isXhr) {
         ctx.session.info = err.message.split(':')[2]
         ctx.redirect(ctx.session.currentFormUrl || '/')
@@ -18,7 +16,7 @@ module.exports = async (ctx, next) => {
         }
       }
     } else {
-      console.error(err)
+      console.error(err.message)
       const status = err.status || 500;
       ctx.status = status;
       if (!ctx.state.isXhr) {

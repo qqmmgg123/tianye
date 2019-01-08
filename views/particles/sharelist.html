@@ -1,10 +1,11 @@
 <% shares.forEach((share) => { %>
 <li class="item fade">
+  <div><%= share.author && share.author.panname || '' %>：</div>
   <blockquote>
     <% if (share.title) { %>
     <a href="/share/<%= share._id %>"><h3><%= share.title || '' %></h3></a>
     <% } %>
-    <p><%= share.content || '' %></p>
+    <p><%= share.summary || '' %></p>
     <em><%= share.name || '' %></em>
   </blockquote>
   <div class="bottom-bar">

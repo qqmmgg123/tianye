@@ -29,7 +29,9 @@ const constant = {
   USER_NOT_EXISTS: '该用户不存在 :(',
   USERNAME_ERROR: '用户名不存在 :(',
   USERNAME_REQUIRED: '用户名用来识别和保存你的内容，请不要留空 :(',
+  PANNAME_CAN_NOT_EMPTY: '抱歉，请给自己取一个的对外的笔名',
   EMAIL_REQUIRED: '邮箱用于验证当前是否为您本人操作，请不要留空 :(',
+  OVER_MAX_SUMMARYLENGTH: '摘要不能超出150个字符',
   EMAIL_EXISTS: '该邮箱已经被使用 :(',
   USERNAME_MAXLEN_ERROR: '用户名最多24个字 :(',
   CONTENT_MAXLEN_ERROR: '内容最多30个字 :(',
@@ -39,9 +41,8 @@ const constant = {
   VCODE_ERROR: '验证码错误 :(',
 
   // 列表加载提示语
-  NO_MINE_TROUBLE: '当前没有内容。',
-  NO_MINE_COMFORT: '期待您给我们熬制不一样的鸡汤',
   OTHER_FRIEND_REQUESTING: '您已经发起了将对方添加为{{FRIEND_NAME}}的申请',
+  NO_TROUBLE: '当前没有内容。',
   NO_DIARYS: '当前没有内容。',
   NO_CLASSICS: '当前没有内容。',
   NO_USER_RESULT: '抱歉，未找到该用户~',
@@ -63,20 +64,20 @@ const constant = {
 
   // 功能
   FEATURES: {
-    DIARY: '心情杂记',
-    HELP: '排忧解难',
-    SHARE: '心得感悟', // '原创分享',
-    CLASSIC: '著作经典',
+    DIARY: '心语',// '心情杂记',
+    HELP: '解忧',// '排忧解难',
+    SHARE: '感悟',// '心得感悟', // '原创分享',
+    CLASSIC: '经典'// '著作经典',
   },
 
   // 版块
   COLUMNS: {
     SENTENCE: {
-      name: '鸡汤句子',
+      name: '句子',// '鸡汤句子',
       id: 'sentence'
     },
     LITERATURE: {
-      name: '散文诗歌',
+      name: '文章',// '散文诗歌',
       id: 'literature'
     },
     /* NATURAL: {
@@ -94,6 +95,7 @@ const constant = {
 
   // 默认图片
   DEFAULT_IMAGE: 'https://dns3.cinehello.com/1529484315_store_PD_BbR2cfWN.png',
+  SUMMARY_LIMIT: 150
 }
 
 // 输出模块

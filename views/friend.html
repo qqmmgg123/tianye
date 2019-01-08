@@ -7,8 +7,11 @@
     <% friends.forEach(friend => { %>
       <% if (friend.status === 1 && friend.recipient_status === 0) { %>
         <li>
-          <div><%= friend.remark || friend.recipient_name %>拒绝了你的申请...</div>
-          <div><%= friend.content %></div>
+          <div class="info">
+            <div class="info-user"><%= friend.remark || friend.recipient_name %></div>
+            <div class="info-state">拒绝了你的申请...</div>
+            <div class="info-message"><%= friend.content %></div>
+          </div>
           <div>
             <button
             data-id="<%= friend.recipient_id %>" 
@@ -19,8 +22,11 @@
         </li>
       <% } else if (friend.status === 1 && friend.recipient_status === 2) { %>
         <li>
-          <div><%= friend.remark || friend.recipient_name %>等待对方验证...</div>
-          <div>
+          <div class="info">
+            <div class="info-user"><%= friend.remark || friend.recipient_name %></div>
+            <div class="info-state">等待对方验证...</div>
+          </div>
+          <div class="ctrl">
             <button
             data-id="<%= friend.recipient_id %>" 
             rel-ctl="friend-remove"
@@ -30,15 +36,16 @@
         </li>
       <% } else if (friend.status === 2 && friend.recipient_status === 1) { %>
         <li>
-          <div><%= friend.remark || friend.recipient_name %>申请加你为知己</div>
-          <div><%= friend.content %></div>
-          <div>
+          <div class="info">
+            <div class="info-user"><%= friend.remark || friend.recipient_name %></div>
+            <div class="info-state">申请加您为知己?</div>
+            <div class="info-message"><%= friend.content %></div>
+          </div>
+          <div class="ctrl">
             <button
             data-id="<%= friend.recipient_id %>" 
             rel-ctl="friend-accept"
             >同意</button>
-          </div>
-          <div>
             <button
             data-id="<%= friend.recipient_id %>" 
             rel-ctl="friend-deny"
@@ -47,8 +54,10 @@
         </li>
       <% } else if (friend.status === 3 && friend.recipient_status === 3) { %>
         <li>
-          <div><%= friend.remark || friend.recipient_name %></div>
-          <div>
+          <div class="info">
+            <div class="info-user"><%= friend.remark || friend.recipient_name %></div>
+          </div>
+          <div class="ctrl">
             <button
             data-id="<%= friend.recipient_id %>" 
             rel-ctl="friend-remove"

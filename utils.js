@@ -81,9 +81,9 @@ module.exports = {
 
       var days = times / (24 * 60 * 60 * 1000);
       if (days <= 1) {
-        return '昨天';
+        return ['昨天', timeStr].join(' ');
       } else if (days <= 2) {
-        return '前天';
+        return ['前天', timeStr].join(' ');
       } else if (days <= 7) {
         return Math.floor(days) + '\u5929\u524D';
       }

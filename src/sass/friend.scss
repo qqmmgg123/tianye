@@ -7,5 +7,31 @@
   }
   button {
     white-space: nowrap;
+    margin-left: 10px;
   }
+}
+
+#friends.list {
+  li {
+    display: flex;
+    align-items: center;
+    .info {
+      flex: 1;
+      .info-user {
+        font-size: 16px;
+        flex: 0 0 150px;
+      }
+      .info-state {
+        color: #999;
+      }
+      .info-message {
+        font-size: 14px;
+        color: #666;
+      }
+    }
+  }
+}
+
+.requestEditor {
+  
 }

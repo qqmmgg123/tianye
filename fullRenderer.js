@@ -18,10 +18,12 @@ module.exports = function(ctx, next) {
       particles: `${relPath}.html`,
       globalData: clientData
     })
-    if (!ctx.isXhr) {
+    if (!ctx.state.isXhr) {
       return ctx.render('layouts/layout', serverData)
     } else {
-      ctx.body = clientData
+      ctx.body = Object.assign({
+        success: true
+      }, data)
     }
   }
   return next()

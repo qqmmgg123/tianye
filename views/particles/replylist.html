@@ -1,0 +1,45 @@
+<% if (help.replies && help.replies.length) { %>
+  <ol class="replies">
+    <% help.replies.forEach((reply) => { %>
+    <li class="item fade">
+      <%= reply.remark && reply.remark.toString() || reply.username %>
+      <% if (reply.reply_type === 'reply') { %>
+        @ <%= reply.rremark && reply.rremark.toString() || reply.receivername %>
+      <% } %>
+      ：<%= reply.content %>
+      <div>
+        <a href="/classic/<%= reply.ref_id %>"><h4><%= reply.ref_title || '' %></h4></a>
+        <p><%= reply.ref_summary || '' %></p>
+      </div>
+      <div class="bottom-bar">
+        <% if (user && user.id && reply.creator_id.toString() === user._id.toString()) { %>
+          <a 
+          data-id="<%= reply._id %>" 
+          data-hiding="false" 
+          rel-ctl="reply-remove"
+          href="javascript:;">删除</a>
+        <% } %>
+        <a 
+        rel-ctl="trouble-reply"
+        data-id="<%= reply._id %>" 
+        data-type="reply"
+        data-pid="<%= help._id %>" 
+        data-ptype="trouble" 
+        data-ruid="<%= reply.creator_id %>"
+        data-shown="false"
+        href="javascript:;">回复</a>
+      </div>
+    </li>
+    <% }) %>
+  </ol>
+  <% if (help.reply_count > 5 && type === 'list') { %>
+  <div><a href="/help/<%= help._id %>">更多 <%= help.reply_count - 5 %> 条</a></div>
+  <% } %>
+  <% } else { %>
+  <% if (type === 'detail') { %>
+  <div>
+    <center><%= noDataTips %></center>
+  </div>
+  <%- include(tempRoot + 'particles/pagination.html') %>
+  <% } %>
+  <% } %>

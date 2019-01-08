@@ -1,10 +1,12 @@
 import '@babel/polyfill'
 import { get, del, post } from './lib/request'
 import ejs from 'ejs'
-
 // 其他组件引入
 import classicEditor from './component/classiceditor'
-classicEditor.create()
+
+if (globalData.user) {
+  classicEditor.create()
+}
 
 // 组件开始
 import recommendTempHtml from '../../views/particles/recommend.html'
@@ -30,14 +32,17 @@ classicList.addEventListener('click', async (e) => {
       if (!hiding) {
         let id = el.dataset && el.dataset.id || el.getAttribute('data-id')
         let res = await del(`/classic/${id}`)
-        if (res.success) {
-          let item = el.closest('li.item')
-          item.addEventListener("transitionend", (event) => {
-            item.parentNode.removeChild(item)
-            window.location.reload()
-            el.dataset.hiding = true
-          }, false);
-          item.className = 'item fade hide'
+        if (res) {
+          let { success } = res
+          if (success) {
+            let item = el.closest('li.item')
+            item.addEventListener("transitionend", (event) => {
+              item.parentNode.removeChild(item)
+              window.location.reload()
+              el.dataset.hiding = true
+            }, false);
+            item.className = 'item fade hide'
+          }
         }
       }
       return
@@ -62,18 +67,21 @@ classicList.addEventListener('click', async (e) => {
       let shown = (el.dataset && el.dataset.shown || el.getAttribute('data-shown')) === 'true'
       if (!shown) {
         let res = await get(`/recommend/helps`)
-        if (res.success) {
-          globalData.helps = res.helps
-          el.closest('div').insertAdjacentHTML('afterend', remHelpSelectTemp({ 
-            helps: res.helps,
-            classicId,
-            width: 480,
-            noDataTips: globalData.noDataTips
-          }))
-          if (el.dataset) {
-            el.dataset.shown = 'true'
-          } else {
-            el.getAttribute('data-shown', 'true') 
+        if (res) {
+          let { success } = res
+          if (success) {
+            globalData.helps = res.helps
+            el.closest('div').insertAdjacentHTML('afterend', remHelpSelectTemp({ 
+              helps: res.helps,
+              classicId,
+              width: 480,
+              noDataTips: globalData.noDataTips
+            }))
+            if (el.dataset) {
+              el.dataset.shown = 'true'
+            } else {
+              el.getAttribute('data-shown', 'true') 
+            }
           }
         }
         return
@@ -112,8 +120,11 @@ classicList.addEventListener('click', async (e) => {
         parent_type: parentType,
         ref_id
       })
-      if (res.success) {
-        popup.parentElement.removeChild(popup)
+      if (res) {
+        let { success } = res
+        if (success) {
+          popup.parentElement.removeChild(popup)
+        }
       }
       return
     }
