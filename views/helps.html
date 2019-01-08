@@ -15,71 +15,36 @@
   </form>
 </div>
 <ol id="my-troubles" class="list">
-  <% if (relations.length ) { %>
-  <% relations.forEach((relation) => { %>
+  <% if (helps.length ) { %>
+  <% helps.forEach((help) => { %>
   <li class="item fade">
     <blockquote>
-      <em><%= relation.remark && relation.remark.toString() || relation.username %></em>
-      <h3><%= relation.content || '' %></h3>
+      <em><%= help.remark && help.remark.toString() || help.username %></em>
+      <h3><%= help.content || '' %></h3>
     </blockquote>
     <div class="bottom-bar">
       <a
       rel-ctl="trouble-reply"
-      data-id="<%= relation._id %>" 
+      data-id="<%= help._id %>" 
       data-type="trouble"
-      data-pid="<%= relation._id %>" 
+      data-pid="<%= help._id %>" 
       data-ptype="trouble"
-      data-ruid="<%= relation.creator_id %>"
+      data-ruid="<%= help.creator_id %>"
       data-shown="false"
       href="javascript:;">
         回复
       </a>
-      <% if (relation.creator_id.equals(user.id)) { %>
+      <% if (help.creator_id.equals(user.id)) { %>
         <a 
-        data-id="<%= relation._id %>" 
+        data-id="<%= help._id %>" 
         data-hiding="false" 
         rel-ctl="trouble-remove"
         href="javascript:;">已排解</a>
       <% } %>
     </div>
-    <% if (relation.replies && relation.replies.length) { %>
-    <ol class="replies">
-      <% relation.replies.forEach((reply) => { %>
-      <li class="item fade">
-        <%= reply.remark && reply.remark.toString() || reply.username %>
-        <% if (reply.reply_type === 'reply') { %>
-          @ <%= reply.receivername %>
-        <% } %>
-        ：<%= reply.content %>
-        <div>
-          <a href="/classic/<%= reply.ref_id %>"><h4><%= reply.ref_title || '' %></h4></a>
-          <p><%= reply.ref_summary || '' %></p>
-        </div>
-        <div class="bottom-bar">
-          <% if (user && user.id && reply.creator_id.toString() === user._id.toString()) { %>
-            <a 
-            data-id="<%= reply._id %>" 
-            data-hiding="false" 
-            rel-ctl="reply-remove"
-            href="javascript:;">删除</a>
-          <% } %>
-          <a 
-          rel-ctl="trouble-reply"
-          data-id="<%= reply._id %>" 
-          data-type="reply"
-          data-pid="<%= relation._id %>" 
-          data-ptype="trouble" 
-          data-ruid="<%= reply.creator_id %>"
-          data-shown="false"
-          href="javascript:;">回复</a>
-        </div>
-      </li>
-      <% }) %>
-    </ol>
-    <% if (relation.reply_count > 5) { %>
-    <div><a href="/help/<%= relation._id %>">更多 <%= relation.reply_count - 5 %> 条</a></div>
-    <% } %>
-    <% } %>
+    <div class="reply-list">
+      <%- include(tempRoot + 'particles/replylist.html', { help: help, type: 'list' }) %>
+    </div>
     <hr />
   </li>
   <% }) %>

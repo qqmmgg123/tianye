@@ -1,4 +1,5 @@
-import { exec, init } from 'pell'
+import { exec, init } from './richeditor'
+
 
 export default {
   create () {
@@ -13,30 +14,8 @@ export default {
       actions: [
         'bold',
         'underline',
-        {
-          name: 'italic',
-          result: () => exec('italic')
-        },
-        {
-          name: 'backColor',
-          icon: '<div style="background-color:pink;">A</div>',
-          title: 'Highlight Color',
-          result: () => exec('backColor', 'pink')
-        },
-        {
-          name: 'image',
-          result: () => {
-            const url = window.prompt('Enter the image URL')
-            if (url) exec('insertImage', url)
-          }
-        },
-        {
-          name: 'link',
-          result: () => {
-            const url = window.prompt('Enter the link URL')
-            if (url) exec('createLink', url)
-          }
-        }
+        'italic',
+        'strikethrough',
       ],
       classes: {
         actionbar: 'pell-actionbar-custom-name',
@@ -48,6 +27,6 @@ export default {
 
     // editor.content<HTMLElement>
     // To change the editor's content:
-    editor.content.innerHTML = contentEl.textContent || '<b><u><i>内容...</i></u></b>'
+    editor.content.innerHTML = contentEl.textContent || '<p>内容...</p>'
   }
 }

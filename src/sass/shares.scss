@@ -65,6 +65,8 @@ ol.list {
       p {
         font-size: 14px;
         color: lighten($gray, 30%);
+        word-wrap: break-word;
+        white-space: pre-wrap;
       }
       em {
         font-style: normal;

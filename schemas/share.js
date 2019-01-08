@@ -11,6 +11,15 @@ let shareSchema = new Schema({
     type: String, 
     trim: true
   },
+  is_extract: {
+    type: Boolean,
+    default: false
+  },
+  summary: { 
+    type: String, 
+    maxlength: [ 150, constant.OVER_MAX_SUMMARYLENGTH ],
+    trim: true
+  },
   creator_id: { 
     type: Schema.Types.ObjectId,
     required: [true, constant.USERNAME_REQUIRED],
@@ -34,6 +43,12 @@ let shareSchema = new Schema({
     type: Number,
     default: 0
   },
+}, { toJSON: { virtuals: true } })
+
+shareSchema.virtual('author', {
+  ref: 'User',
+  localField: 'creator_id',
+  foreignField: '_id'
 })
 
 module.exports = shareSchema

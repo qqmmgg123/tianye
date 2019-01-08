@@ -6,7 +6,7 @@ const constant = require('./settings/const')
 
 // This is an example! Use password hashing in your project and avoid storing passwords in your code
 async function fetchUser(username, password) {
-  const user = await User.findOne({ username }).select('hash salt')
+  const user = await User.findOne({ username }).select('hash salt username panname email')
   if (user) {
     const hashRaw = await utils.pbkdf2(password, user.salt)
     let hash = new Buffer(hashRaw, 'hex')//.toString('hex')
