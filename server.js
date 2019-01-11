@@ -395,7 +395,6 @@ router.post('/signup', async (ctx, next) => {
       code: code
     })
     return passport.authenticate('local', (err, user, info, status) => {
-      console.log(err)
       if (err) {
         ctx.body = {
           success: false,
@@ -422,7 +421,8 @@ router.post('/signup', async (ctx, next) => {
                 ctx.session.currentUrl = null
                 ctx.body = {
                   success: true,
-                  redirectUrl: currentUrl
+                  redirectUrl: currentUrl,
+                  user
                 }
               } else {
                 ctx.body = {
@@ -477,7 +477,7 @@ router.post('/email/vcode',async (ctx)=>{
 
   // 发送验证码邮件
   try {
-    await transporter.sendMail({
+    /*await transporter.sendMail({
       // 发件人
       from: '<qqmmgg123@126.com>',
       // 主题
@@ -486,7 +486,13 @@ router.post('/email/vcode',async (ctx)=>{
       to: email,//前台传过来的邮箱
       // 邮件内容，HTML格式
       text: '用 ' + code + ' 作为你的验证码'
+    })*/
+    let result = await new Promise((res, rej) => {
+      setTimeout(() => {
+        res('用 ' + code + ' 作为你的验证码')
+      }, )
     })
+    console.log(result)
     ctx.body = {
       success: true
     }
