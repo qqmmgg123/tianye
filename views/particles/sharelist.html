@@ -1,3 +1,4 @@
+<% if (shares && shares.length) { %>
 <% shares.forEach((share) => { %>
 <li class="item fade">
   <div><%= share.author && share.author.panname || '' %>：</div>
@@ -43,3 +44,8 @@
   <hr />
 </li>
 <% }) %>
+<% } else { %>
+  <li>
+    <center><%= noDataTips %></center>
+  </li>
+<% } %>

@@ -1,6 +1,7 @@
 <%- include(tempRoot + 'particles/features.html') %>
 <%- include(tempRoot + 'particles/classiceditor.html') %>
 <ol id="classics" class="list">
+  <% if (classic && classic.length) { %>
   <% classics.forEach((classic) => { %>
   <li class="item fade">
     <%- include(tempRoot + 'particles/classicref.html', { classic }) %>
@@ -30,5 +31,10 @@
     <hr />
   </li>
   <% }) %>
+  <% } else { %>
+    <li>
+      <center><%= noDataTips %></center>
+    </li>
+  <% } %>
   <%- include(tempRoot + 'particles/pagination.html') %>
 </ol>
