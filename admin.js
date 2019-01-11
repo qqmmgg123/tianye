@@ -22,7 +22,7 @@ async function addsuper(username) {
 
 program
   .version('0.1.0')
-  .option('-a, --addsuper [uid]', 'Add super')
+  .option('-a, --addsuper [username]', 'Add super')
   .parse(process.argv)
 
 if (program.addsuper) addsuper(program.addsuper)
