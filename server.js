@@ -934,7 +934,7 @@ router.get('/features/help', async (ctx, next) => {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
     troubleHolder: constant.TROUBLE_HOLDER,
-    noDataTips: constant.NO_MINE_TROUBLE,
+    noDataTips: constant.NO_TROUBLE,
     features: constant.FEATURES,
     pageInfo,
     helps,
