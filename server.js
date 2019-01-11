@@ -1259,6 +1259,7 @@ router.get('/features/share', async (ctx, next) => {
     features: constant.FEATURES,
     columns: constant.COLUMNS,
     shareColumnHolder: constant.SHARE_COLUMN_HOLDER,
+    noDataTips: constant.No_SHARE,
     pageInfo,
     shares,
     info
