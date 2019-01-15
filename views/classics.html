@@ -1,7 +1,7 @@
 <%- include(tempRoot + 'particles/features.html') %>
 <%- include(tempRoot + 'particles/classiceditor.html') %>
 <ol id="classics" class="list">
-  <% if (classic && classic.length) { %>
+  <% if (classics && classics.length) { %>
   <% classics.forEach((classic) => { %>
   <li class="item fade">
     <%- include(tempRoot + 'particles/classicref.html', { classic }) %>
