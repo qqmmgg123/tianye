@@ -1,0 +1,28 @@
+<%- include(tempRoot + 'particles/crumbs.html') %>
+<% if (user && (user.administrator || user.super)) { %>
+  <div class="editor">
+    <% if (section && section._id) { %>
+      <form id="sectionForm" method="put"  action="/section/<%= section._id %> %>">
+    <% } else { %>
+      <form id="sectionForm" method="post" action="/classic/<%= classicId %>/section">
+    <% } %>
+      <div class="form-group">
+        <input name="title" placeholder="标题" value="<%= section && section.title || '' %>" />
+      </div>
+      <div class="form-group">
+        <div id="editor" class="pell"></div>
+        <textarea style="display: none;" id="html-output" name="content" rows="6" autofocus><%- section && section.content || '' %></textarea>
+      </div>
+      <div class="bottom-bar">
+        <button type="submit">
+        <% if (section && section.title) { %>
+          更新
+        <% } else { %>
+          保存
+        <% } %>
+        </button>
+        <span><%= info %></span>
+      </div>
+    </form>
+  </div>
+  <% } %>

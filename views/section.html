@@ -1,0 +1,10 @@
+<%- include(tempRoot + 'particles/crumbs.html') %>
+<% if (user && (user.administrator || user.super)) { %>
+<a href="/section/<%= section._id %>/modify" class="button">编辑</a>
+<% } %>
+<div class="content">
+  <h3><%= section.title || '' %></h3>
+  <div class="content-viewer">
+    <%- section.content || '' %>
+  </div>
+</div>

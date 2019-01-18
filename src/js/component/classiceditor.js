@@ -1,6 +1,5 @@
 import { exec, init } from './richeditor'
 
-
 export default {
   create () {
     let contentEl = document.getElementById('html-output')

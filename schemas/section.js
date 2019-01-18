@@ -7,19 +7,14 @@ let sectionSchema = new Schema({
     required: [true, constant.USERNAME_REQUIRED], 
     trim: true
   },
-  summary: { 
-    type: String, 
-    trim: true
-  },
   content: { 
     type: String
   },
   classic_id: { 
     type: Schema.Types.ObjectId,
-    ref: 'Classic'
+    ref: 'Classic',
   },
-  parent_id: Schema.Types.ObjectId,
-  parent_type: String,
+  creator_id: Schema.Types.ObjectId,
   updated_date: { type: Date, default: Date.now },
   created_date: { type: Date, default: Date.now },
 })
