@@ -1,23 +1,26 @@
 const gulp = require('gulp')
 const browserify = require('browserify')
-const webpack = require('webpack');
 const source = require('vinyl-source-stream');
 const buffer = require('vinyl-buffer');
 const browserSync = require('browser-sync').create()
 const plumber = require('gulp-plumber')
-const babel = require('gulp-babel');
 const sass = require('gulp-sass');
 const watch = require('gulp-watch');
 const uglify = require('gulp-uglify');
 const path = require('path');
-const runSequence = require('run-sequence');
-const webpackStream = require('webpack-stream');
-const webpackConfig = require('./webpack.config.js');
 const glob = require('glob');
 const es = require('event-stream');
 const sourcemaps = require('gulp-sourcemaps');
 
-let currentFileName = ''
+//引入PostCss
+const postcss = require('gulp-postcss');
+const bem = require('postcss-bem');
+const cssNext = require('postcss-cssnext');
+const px2rem = require('postcss-px2rem');//px转换成rem
+const autoprefixer = require('autoprefixer-core');
+const postcssSimpleVars = require("postcss-simple-vars");
+const postcssMixins = require("postcss-mixins");
+const postcssNested = require("postcss-nested");
 
 function scripts(filename) {
   return () => {
@@ -35,10 +38,30 @@ function scripts(filename) {
 }
 
 function scss(filename) {
+  let processors = [
+    postcssMixins,
+    postcssSimpleVars,
+    postcssNested,
+    cssNext,
+    bem({style: 'bem'}),
+    px2rem({
+      remUnit: 32
+    }),
+    autoprefixer({
+      browsers: ["Android 4.1", "iOS 7.1", "Chrome > 31", "ff > 31", "ie >= 10"]
+    })];
+
+    /*return gulp.src(['./css/*.css'])
+      .pipe(sourcemaps.init())
+      .pipe(postcss(processors))
+      .pipe(sourcemaps.write("."))
+      .pipe(gulp.dest("./stylesheets"));*/
+
   return () => {
     return gulp.src(`src/sass/${filename}`)
     .pipe(plumber())
     .pipe(sass({ outputStyle: 'compressed' }))
+    .pipe(postcss(processors))
     .pipe(gulp.dest('dist/css'))
     .pipe(browserSync.stream())
       // .on('end', browserSync.reload)
@@ -72,9 +95,23 @@ gulp.task('scripts', (done) => {
 })
 
 gulp.task('scss', (done) => {
+  let processors = [
+    postcssMixins,
+    postcssSimpleVars,
+    postcssNested,
+    cssNext,
+    bem({style: 'bem'}),
+    // px2rem({
+      // remUnit: 32
+    // }),
+    autoprefixer({
+      browsers: ["Android 4.1", "iOS 7.1", "Chrome > 31", "ff > 31", "ie >= 10"]
+    })];
+
   return gulp.src('src/sass/*.scss')
     .pipe(plumber())
     .pipe(sass({ outputStyle: 'compressed' }))
+    .pipe(postcss(processors))
     .pipe(gulp.dest('dist/css'))
     .on('end', done)
 })

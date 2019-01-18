@@ -17,6 +17,7 @@ const Diary = require('./models/diary')
 const Trouble = require('./models/trouble')
 const Share = require('./models/share')
 const Classic = require('./models/classic')
+const Section = require('./models/section')
 const Reply = require('./models/reply')
 const Thank = require('./models/thank')
 const Friend = require('./models/friend')
@@ -134,7 +135,11 @@ router.get([
   '/features/help',
   '/diary/latest',
   '/help/:id',
-  '/recommend/helps'
+  '/recommend/helps',
+  '/share/:id/modify',
+  '/classic/:id/modify',
+  '/classic/:id/section/create',
+  '/section/:id/modify',
 ], (ctx, next) => {
   let { method } = ctx.request
   if (method === 'GET') {
@@ -161,6 +166,8 @@ router.use([
   '/friend/:id/send',
   '/friend/:id/accept',
   '/friend/:id/remove',
+  '/classic/:id/section',
+  '/section/:id',
 ], (ctx, next) => {
   let { method } = ctx.request
   if ([
@@ -514,8 +521,6 @@ router.get([
   '/help/:id',
   '/share/:id',
   '/classic/:id',
-  '/share/:id/modify',
-  '/classic/:id/modify',
   '/friend',
 ], (ctx, next) => {
   ctx.session.currentUrl = ctx.url
@@ -1424,7 +1429,7 @@ router.get('/features/classic', async (ctx, next) => {
   let { query } = ctx.request
   let range = +query.range || constant.PAGE_RANGE
   let page = +query.page || 1
-  let limit = +query.limit || constant.LIST_LIMIT
+  let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
   let index = range / 2
   let lastIndex = range - index
@@ -1477,8 +1482,10 @@ router.get('/features/classic', async (ctx, next) => {
   ctx.session.info = null
 })
 
-// 引经内容页
-router.get('/classic/:id', async (ctx, next) => {
+// 添加章节
+router.get('/classic/:id/section/create', async (ctx, next) => {
+  const { id } = ctx.params
+
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
@@ -1489,10 +1496,132 @@ router.get('/classic/:id', async (ctx, next) => {
   // 来源页错误信息
   let info = ctx.session.info
 
-  // 查找所有烦恼
+  // 返回并渲染首页
+  await ctx.fullRender('sectioneditor', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    section: null,
+    classicId: id,
+    backPage: '/classic/' + id,
+    info
+  })
+
+  ctx.session.info = null
+})
+
+// 编辑章节
+router.get('/section/:id/modify', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 查找章节
+  let section = await Section.findById(id)
+    .select('_id title content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('sectioneditor', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    section,
+    classicId: null,
+    backPage: '/section/' + id,
+    info
+  })
+
+  ctx.session.info = null
+})
+
+// 章节内容页
+router.get('/section/:id', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  const section = await Section.findById(id)
+    .select('_id classic_id title content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('section', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    section,
+    backPage: '/classic/' + section.classic_id
+  })
+
+  ctx.session.info = null
+})
+
+// 引经内容页
+router.get('/classic/:id', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 查找典籍
   let classic = await Classic.findById(
     ctx.params.id)
     .select('_id title poster summary content')
+    .lean()
+
+  // 分页
+  let range = constant.PAGE_RANGE
+  let page = 1
+  let limit = constant.LIST_LIMIT
+  let skip = (page - 1) * limit
+  let index = range / 2
+  let lastIndex = range - index
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 章节总数
+  let total = await Section.estimatedDocumentCount()
+  let totalPage = Math.ceil(total / limit)
+  let pageInfo = null
+
+  const nextPage = page < totalPage ? page + 1 : 0
+  if (ctx.state.isXhr) {
+    pageInfo = {
+      nextPage
+    }
+  } else {
+    pageInfo = {
+      currPage: page,
+      prevPage: page > 1 ? page - 1 : 0,
+      pages: pageRange(
+        Math.max(1, page + 1 - index), 
+        Math.min(totalPage, page + lastIndex)
+      ),
+      nextPage
+    }
+  }
+
+  let sections = await Section.find({
+    classic_id: ctx.params.id
+  })
+    .select('_id title')
+    .skip(skip)
+    .limit(limit)
     .lean()
 
   // 返回并渲染首页
@@ -1500,11 +1629,42 @@ router.get('/classic/:id', async (ctx, next) => {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
     classic,
+    sections,
     backPage: '/features/classic',
+    pageInfo,
     info
   })
 
   ctx.session.info = null
+})
+
+router.get('/classic/:id/sections', async (ctx, next) => {
+  // 分页
+  let { query } = ctx.request
+  let page = +query.page || 1
+  let limit = +query.perPage || constant.LIST_LIMIT
+  let skip = (page - 1) * limit
+
+  // 著作总数
+  let total = await Section.estimatedDocumentCount()
+  let totalPage = Math.ceil(total / limit)
+
+  let sections = await Section.find({
+    classic_id: ctx.params.id
+  })
+    .select('_id title')
+    .skip(skip)
+    .limit(limit)
+    .lean()
+
+  const nextPage = page < totalPage ? page + 1 : 0
+  ctx.body = {
+    success,
+    pageInfo: {
+      nextPage
+    },
+    sections, 
+  }
 })
 
 // 引经据典编辑页
@@ -1714,6 +1874,60 @@ router.put('/classic/:id', async (ctx) => {
       creator_id: user._id
     }, { 
       $set: { title, poster, summary, content },
+    }, { 
+      runValidators: true 
+    })
+    ctx.body = {
+      success: true,
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      info: err.message
+    }
+  }
+})
+
+// 添加章节
+router.post('/classic/:id/section', async (ctx) => {
+  const { id } = ctx.params
+  const { title, content } = ctx.request.body
+  const { user } = ctx.state
+  const uid = user._id
+  const classic = await Classic.findOne({
+    _id: id,
+    creator_id: uid
+  }).select('_id').lean()
+
+  if (!classic) {
+    ctx.session.info = '您要添加章节的典籍不存在。'
+  } else {
+    try {
+      await Section.create({ 
+        title,
+        content,
+        classic_id: id,
+        creator_id: uid
+      })
+    } catch (err) {
+      ctx.session.info = err.message
+    }
+  }
+  ctx.redirect(ctx.session.currentUrl || '')
+  ctx.status = 302
+})
+
+// 编辑章节
+router.put('/section/:id', async (ctx) => {
+  const { id } = ctx.params
+  const { title, content } = ctx.request.body
+  const { user } = ctx.state
+  try {
+    await Section.findOneAndUpdate({
+      _id: id,
+      creator_id: user._id
+    }, { 
+      $set: { title, content },
     }, { 
       runValidators: true 
     })

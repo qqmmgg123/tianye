@@ -1,4 +1,7 @@
 <%- include(tempRoot + 'particles/crumbs.html') %>
+<% if (user && (user.administrator || user.super)) { %>
+<a href="/classic/<%= classic._id %>/section/create" class="button">添加章节</a>
+<% } %>
 <div class="content">
   <h3><%= classic.title || '' %></h3>
   <blockquote>
@@ -7,4 +10,11 @@
   <div class="content-viewer">
     <%- classic.content || '' %>
   </div>
+  <% if (sections && sections.length) { %>
+  <ol>
+    <% sections.forEach((section) => { %>
+    <li><a href="/section/<%= section._id %>"><%= section.title || '' %></a></li>
+    <% }) %>
+  </ol>
+  <% } %>
 </div>
