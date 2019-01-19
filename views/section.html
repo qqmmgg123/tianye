@@ -1,7 +1,9 @@
 <%- include(tempRoot + 'particles/crumbs.html') %>
 <% if (user && (user.administrator || user.super)) { %>
 <a href="/section/<%= section._id %>/modify" class="button">编辑</a>
+<a href="/section/<%= section._id %>/translate/create" class="button">翻译</a>
 <% } %>
+<a href="/section/<%= section._id %>/translates" class="button">查看译文</a>
 <div class="content">
   <h3><%= section.title || '' %></h3>
   <div class="content-viewer">

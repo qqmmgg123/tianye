@@ -18,6 +18,7 @@ const Trouble = require('./models/trouble')
 const Share = require('./models/share')
 const Classic = require('./models/classic')
 const Section = require('./models/section')
+const Translate = require('./models/translate')
 const Reply = require('./models/reply')
 const Thank = require('./models/thank')
 const Friend = require('./models/friend')
@@ -140,6 +141,8 @@ router.get([
   '/classic/:id/modify',
   '/classic/:id/section/create',
   '/section/:id/modify',
+  '/section/:id/translate/create',
+  '/translate/:id/modify',
 ], (ctx, next) => {
   let { method } = ctx.request
   if (method === 'GET') {
@@ -168,6 +171,8 @@ router.use([
   '/friend/:id/remove',
   '/classic/:id/section',
   '/section/:id',
+  '/section/:id/translate',
+  '/translate/:id',
 ], (ctx, next) => {
   let { method } = ctx.request
   if ([
@@ -1542,6 +1547,121 @@ router.get('/section/:id/modify', async (ctx, next) => {
   ctx.session.info = null
 })
 
+// 编辑章节
+router.get('/translate/:id/modify', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 查找翻译
+  let translate = await Translate.findById(id)
+    .select('_id title content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('translateeditor', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    translate,
+    sectionId: null,
+    backPage: '/translate/' + id,
+    info
+  })
+
+  ctx.session.info = null
+})
+
+router.get('/section/:id/translate/create', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 返回并渲染首页
+  await ctx.fullRender('translateeditor', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    translate: null,
+    sectionId: id,
+    backPage: '/section/' + id,
+    info
+  })
+
+  ctx.session.info = null
+})
+
+router.get('/translate/:id/modify', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 查找章节
+  let translate = await Translate.findById(id)
+    .select('_id title content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('sectioneditor', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    translate,
+    sectionId: null,
+    backPage: '/translate/' + id,
+    info
+  })
+
+  ctx.session.info = null
+})
+
+// 翻译内容页
+router.get('/translate/:id', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  const translate = await Translate.findById(id)
+    .select('_id section_id title content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('translate', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    translate,
+    backPage: '/section/' + translate.section_id + '/translates'
+  })
+
+  ctx.session.info = null
+})
+
 // 章节内容页
 router.get('/section/:id', async (ctx, next) => {
   const { id } = ctx.params
@@ -1665,6 +1785,73 @@ router.get('/classic/:id/sections', async (ctx, next) => {
     },
     sections, 
   }
+})
+
+router.get('/section/:id/translates', async (ctx, next) => {
+  const { id } = ctx.params
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 分页
+  let { query } = ctx.request
+  let range = +query.range || constant.PAGE_RANGE
+  let page = +query.page || 1
+  let limit = +query.perPage || constant.LIST_LIMIT
+  let skip = (page - 1) * limit
+  let index = range / 2
+  let lastIndex = range - index
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 心语总数
+  let total = await Translate.countDocuments({ section_id: id })
+  let totalPage = Math.ceil(total / limit)
+  let pageInfo = null
+
+  const nextPage = page < totalPage ? page + 1 : 0
+  if (ctx.state.isXhr) {
+    pageInfo = {
+      nextPage
+    }
+  } else {
+    pageInfo = {
+      currPage: page,
+      prevPage: page > 1 ? page - 1 : 0,
+      pages: pageRange(
+        Math.max(1, page + 1 - index), 
+        Math.min(totalPage, page + lastIndex)
+      ),
+      nextPage
+    }
+  }
+
+  // 查找所有记录
+  let translates = await Translate.find({})
+    .select('_id title creator_id')
+    .sort({ created_date: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean()
+
+  // 返回并渲染章节页
+  await ctx.fullRender('translates', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    diaryHolder: constant.DIARY_HOLDER,
+    features: constant.FEATURES,
+    noDataTips: constant.NO_TRANSLATE,
+    pageInfo,
+    translates,
+    backPage: `/section/${id}`,
+    info
+  })
+
+  ctx.session.info = null
 })
 
 // 引经据典编辑页
@@ -1900,7 +2087,7 @@ router.post('/classic/:id/section', async (ctx) => {
   }).select('_id').lean()
 
   if (!classic) {
-    ctx.session.info = '您要添加章节的典籍不存在。'
+    ctx.session.info = constant.SECTION_CLASSIC_NOT_EXIST
   } else {
     try {
       await Section.create({ 
@@ -1913,7 +2100,7 @@ router.post('/classic/:id/section', async (ctx) => {
       ctx.session.info = err.message
     }
   }
-  ctx.redirect(ctx.session.currentUrl || '')
+  ctx.redirect(`/classic/${id}`)
   ctx.status = 302
 })
 
@@ -1924,6 +2111,59 @@ router.put('/section/:id', async (ctx) => {
   const { user } = ctx.state
   try {
     await Section.findOneAndUpdate({
+      _id: id,
+      creator_id: user._id
+    }, { 
+      $set: { title, content },
+    }, { 
+      runValidators: true 
+    })
+    ctx.body = {
+      success: true,
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      info: err.message
+    }
+  }
+})
+
+// 添加翻译
+router.post('/section/:id/translate', async (ctx) => {
+  const { id } = ctx.params
+  const { title, content } = ctx.request.body
+  const { user } = ctx.state
+  const uid = user._id
+  const section = await Section.findOne({
+    _id: id
+  }).select('_id').lean()
+
+  if (!section) {
+    ctx.session.info = constant.TRANSLATE_SECTION_NOT_EXIST
+  } else {
+    try {
+      await Translate.create({ 
+        title,
+        content,
+        section_id: id,
+        creator_id: uid
+      })
+    } catch (err) {
+      ctx.session.info = err.message
+    }
+  }
+  ctx.redirect(`/section/${id}/translates`)
+  ctx.status = 302
+})
+
+// 编辑翻译
+router.put('/translate/:id', async (ctx) => {
+  const { id } = ctx.params
+  const { title, content } = ctx.request.body
+  const { user } = ctx.state
+  try {
+    await Translate.findOneAndUpdate({
       _id: id,
       creator_id: user._id
     }, { 

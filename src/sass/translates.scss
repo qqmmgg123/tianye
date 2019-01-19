@@ -1,0 +1,16 @@
+@import 'common.scss';
+
+ol.list {
+  > li.item {
+    blockquote {
+      h3 {
+        font-size: 16px;
+        white-space: normal;
+      }
+    }
+    .bottom-bar {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+}

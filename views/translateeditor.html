@@ -1,0 +1,28 @@
+<%- include(tempRoot + 'particles/crumbs.html') %>
+<% if (user && (user.administrator || user.super)) { %>
+  <div class="editor">
+    <% if (translate && translate._id) { %>
+      <form id="translateForm" method="put"  action="/translate/<%= translate._id %> %>">
+    <% } else { %>
+      <form id="translateForm" method="post" action="/section/<%= sectionId %>/translate">
+    <% } %>
+      <div class="form-group">
+        <input name="title" placeholder="标题" value="<%= translate && translate.title || '' %>" />
+      </div>
+      <div class="form-group">
+        <div id="editor" class="pell"></div>
+        <textarea style="display: none;" id="html-output" name="content" rows="6" autofocus><%- translate && translate.content || '' %></textarea>
+      </div>
+      <div class="bottom-bar">
+        <button type="submit">
+        <% if (translate && translate.title) { %>
+          更新
+        <% } else { %>
+          保存
+        <% } %>
+        </button>
+        <span><%= info %></span>
+      </div>
+    </form>
+  </div>
+  <% } %>
