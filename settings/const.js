@@ -39,6 +39,10 @@ const constant = {
   PASSWORD_ERROR: '密码错误 :(',
   CODE_REQUIRED: '验证码没有输入 :(',
   VCODE_ERROR: '验证码错误 :(',
+  SECTION_CLASSIC_NOT_EXIST: '您要添加章节的典籍不存在。',
+  TRANSLATE_TITLE_REQUIRED: '翻译标题需要填写', 
+  TRANSLATE_CONTENT_REQUIRED: '翻译内容需要填写', 
+  TRANSLATE_SECTION_NOT_EXIST: '您要翻译的章节不存在。',
 
   // 列表加载提示语
   OTHER_FRIEND_REQUESTING: '您已经发起了将对方添加为{{FRIEND_NAME}}的申请',
@@ -47,6 +51,7 @@ const constant = {
   No_SHARE: '当前没有内容。',
   NO_CLASSICS: '当前没有内容。',
   NO_USER_RESULT: '抱歉，未找到该用户~',
+  NO_TRANSLATE: '当前章节没有译文。',
 
   // 操作提示
   FRIEND_EXISTS: '对方已经是你{{FRIEND_NAME}}了',
