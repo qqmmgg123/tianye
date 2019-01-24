@@ -12,6 +12,7 @@ let diarySchema = new Schema({
   },
   creator_id: Schema.Types.ObjectId,
   created_date: { type: Date, default: Date.now },
+  updated_date: { type: Date, default: Date.now }
 })
 
 module.exports = diarySchema
