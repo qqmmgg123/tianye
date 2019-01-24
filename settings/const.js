@@ -11,7 +11,7 @@ const constant = {
 
   // 表单提示语
   DIARY_HOLDER: '记录点滴心语...',
-  TROUBLE_HOLDER: '诉出您的忧扰...',
+  TROUBLE_HOLDER: '向知己诉说您内心的纠结...',
   SHARE_COLUMN_HOLDER: '请选择你创作的书写类型',
   SHARE_HOLDER: '内容...',
   COMFORT_HOLDER: '分享一点鸡汤',
@@ -70,10 +70,12 @@ const constant = {
 
   // 功能
   FEATURES: {
-    DIARY: '心语',// '心情杂记',
-    HELP: '解忧',// '排忧解难',
-    SHARE: '感悟',// '心得感悟', // '原创分享',
-    CLASSIC: '典籍'// '著作经典',
+    HEART: '心',
+    KARMA: '缘',
+    CLASSIC: '知',// '著作经典',
+    // DIARY: '心语',// '心情杂记',
+    // HELP: '心结',// '排忧解难',
+    // SHARE: '心得',// '心得感悟', // '原创分享',
   },
 
   // 版块

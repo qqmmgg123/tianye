@@ -135,6 +135,8 @@ router.get([
   '/features/diary',
   '/features/help',
   '/diary/latest',
+  '/diary/:id',
+  // '/diary/:id/modify',
   '/help/:id',
   '/recommend/helps',
   '/share/:id/modify',
@@ -519,6 +521,8 @@ router.post('/email/vcode',async (ctx)=>{
 
 // 记录当前页面url状态
 router.get([
+  '/features/heart',
+  '/features/karma',
   '/features/diary',
   '/features/help',
   '/features/share',
@@ -586,6 +590,18 @@ router.get('/friend', async (ctx, next) => {
   })
 
   ctx.session.info = null
+})
+
+// 获取指定用户公开信息
+router.get('/profile/:id', async (ctx, next) => {
+  const { id } = ctx.params
+  const profile = await User.findById(id)
+    .select('_id panname')
+
+  ctx.body = {
+    success: true,
+    profile,
+  }
 })
 
 // 查找用户
@@ -678,6 +694,100 @@ router.get('/user/search', async (ctx, next) => {
   }
 })
 
+
+// 心
+router.get('/features/heart', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 分页
+  let { query } = ctx.request
+  let range = +query.range || constant.PAGE_RANGE
+  let page = +query.page || 1
+  let limit = +query.perPage || constant.LIST_LIMIT
+  let skip = (page - 1) * limit
+  let index = range / 2
+  let lastIndex = range - index
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 心语总数
+  let total = await Diary.estimatedDocumentCount()
+  let totalPage = Math.ceil(total / limit)
+  let pageInfo = null
+
+  const nextPage = page < totalPage ? page + 1 : 0
+  if (ctx.state.isXhr) {
+    pageInfo = {
+      nextPage
+    }
+  } else {
+    pageInfo = {
+      currPage: page,
+      prevPage: page > 1 ? page - 1 : 0,
+      pages: pageRange(
+        Math.max(1, page + 1 - index), 
+        Math.min(totalPage, page + lastIndex)
+      ),
+      nextPage
+    }
+  }
+
+  let { user } = ctx.state
+
+  // 查找所有记录
+  let minds = await User.aggregate(
+    [
+      { '$lookup': {
+        'from': Diary.collection.name,
+        'localField': '_id',
+        'foreignField': 'creator_id',
+        'as': 'diary'
+      }},
+      { '$lookup': {
+        'from': Trouble.collection.name,
+        'localField': '_id',
+        'foreignField': 'creator_id',
+        'as': 'help'
+      }},
+      { '$lookup': {
+        'from': Share.collection.name,
+        'localField': '_id',
+        'foreignField': 'creator_id',
+        'as': 'share'
+      }},
+      { '$match': { '_id': user._id }},
+      { '$group': { '_id': null, 'data':{ '$push':{ 'user': '$$ROOT', 'diary': '$diary', 'help': '$help', 'share': '$share' } }, 'count': { '$sum': 1 } } },
+      { '$unwind': '$data' },
+      {
+        '$project': {
+          '_id': '$data.diary._id',
+          'content': '$data.diary.content',
+          'count': 1
+        }
+      },
+      { '$sort': { 'created_date': -1 } },
+      { "$limit": 5 }
+    ]
+  )
+
+  // 返回并渲染首页
+  ctx.body = {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    noDataTips: constant.NO_DIARYS,
+    pageInfo,
+    minds,
+    info
+  }
+})
+
 // 心情杂记
 router.get('/features/diary', async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
@@ -723,8 +833,8 @@ router.get('/features/diary', async (ctx, next) => {
 
   // 查找所有记录
   let diarys = await Diary.find({})
-    .select('_id content created_date creator_id')
-    .sort({ created_date: -1 })
+    .select('_id content updated_date creator_id')
+    .sort({ updated_date: -1, created_date: -1 })
     .skip(skip)
     .limit(limit)
     .lean()
@@ -744,11 +854,12 @@ router.get('/features/diary', async (ctx, next) => {
   ctx.session.info = null
 })
 
+
 // 获得最新心语
 router.get('/diary/latest', async (ctx, next) => {
 
   let diary = await Diary.findOne()
-    .select('_id content created_date')
+    .select('_id content updated_date')
     .sort({created_date: -1})
     .lean()
 
@@ -758,6 +869,70 @@ router.get('/diary/latest', async (ctx, next) => {
   }
 
 })
+
+// 分享内容页
+router.get('/diary/:id', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  let diaryId = ctx.params.id
+  let diary = await Diary.findById(
+    diaryId)
+    .select('_id content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('share', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    diary,
+    backPage: '/features/diary',
+    info
+  })
+
+  ctx.session.info = null
+})
+
+// 心语编辑页
+/* router.get('/diary/:id/modify', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      constant.APP_HOME_PAGE
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 查找所有烦恼
+  let share = await Diary.findById(
+    ctx.params.id)
+    .select('_id title content')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('diarymodify', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    shareHolder: constant.SHARE_HOLDER,
+    shareColumnHolder: constant.SHARE_COLUMN_HOLDER,
+    features: constant.FEATURES,
+    columns: constant.COLUMNS,
+    diary,
+    backPage: '/features/diary',
+    info
+  })
+
+  ctx.session.info = null
+})*/
 
 // 排忧解难
 router.get('/features/help', async (ctx, next) => {
@@ -1831,7 +2006,9 @@ router.get('/section/:id/translates', async (ctx, next) => {
   }
 
   // 查找所有记录
-  let translates = await Translate.find({})
+  let translates = await Translate.find({
+    section_id: id
+  })
     .select('_id title creator_id')
     .sort({ created_date: -1 })
     .skip(skip)
@@ -1936,6 +2113,45 @@ router.post('/diary', async (ctx) => {
     ctx.session.info = info
     ctx.redirect('/features/diary')
     ctx.status = 302
+  }
+})
+
+// 心语修改
+router.put('/diary/:id', async (ctx) => {
+  const { id } = ctx.params
+  const { content } = ctx.request.body
+  const { user } = ctx.state
+  const now = new Date()
+  // const is_extract = content.length > constant.SUMMARY_LIMIT - 3
+  // const summary = is_extract
+    // ? Share.extract(content)
+    // : content 
+  try {
+    await Diary.updateOne({
+      _id: id,
+      creator_id: user._id
+    }, { 
+      $set: { 
+        content, 
+        updated_date: now
+      },
+    }, { 
+      runValidators: true,
+      upsert: true
+    })
+    ctx.body = {
+      success: true,
+      diary: {
+        _id: id,
+        content,
+        updated_date: now
+      },
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      info: err.message
+    }
   }
 })
 
