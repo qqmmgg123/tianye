@@ -1,6 +1,14 @@
 let Schema = require('mongoose').Schema;
+const constant = require('../settings/const')
 
 let thankSchema = new Schema({
+  type_id: {
+    type: String,
+    required: [
+      true, 
+      constant.MISS_PARAMS
+    ],
+  },
   giver_id: { 
     type: Schema.Types.ObjectId, 
     ref: 'User', 

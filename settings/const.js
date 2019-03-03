@@ -1,30 +1,21 @@
 const constant = {
   APP_NAME: '田野',
-  APP_SLOGAN: '回归清净，重拾初心',
-  APP_HOME_PAGE: '首页',
-  APP_SIGNIN_PAGE: '登录',
-  APP_MINE_PAGE: '我的烦恼',
-  APP_MINE_COMFORT_PAGE: '我熬的鸡汤',
-  APP_COMFORT_PAGE: '鸡汤',
-  APP_COMMENT_PAGE: '评论',
-  APP_REPLY_PAGE: '回复',
+  APP_SLOGAN: '耕耘内心',
 
   // 表单提示语
   DIARY_HOLDER: '记录点滴心语...',
-  TROUBLE_HOLDER: '向知己诉说您内心的纠结...',
+  TROUBLE_HOLDER: '向有缘人诉说您内心的纠结...',
   SHARE_COLUMN_HOLDER: '请选择你创作的书写类型',
   SHARE_HOLDER: '内容...',
-  COMFORT_HOLDER: '分享一点鸡汤',
-  COMMENT_HOLDER: '说说你的看法',
   REPLY_HOLDER: '回复',
   USERNAME_HOLDER: '用户名',
   PASSWORD_HOLDER: '密码',
   EMAIL_HOLDER: '邮箱',
 
   // 表单错误
-  NO_TROUBLE_CONTENT: '您发的内容是空的 :(',
-  NO_DIARY_CONTENT: '您发的内容是空的 :(',
-  TITLE_REQUIRED: '标题是空的 :(',
+  MISS_PARAMS: '缺少参数 :(',
+  NO_CONTENT: '正文没有内容 :(',
+  TITLE_REQUIRED: '标题没有写 :(',
   USER_EXISTS: '该用户已经存在 :(',
   USER_NOT_EXISTS: '该用户不存在 :(',
   USERNAME_ERROR: '用户名不存在 :(',
@@ -33,7 +24,7 @@ const constant = {
   EMAIL_REQUIRED: '邮箱用于验证当前是否为您本人操作，请不要留空 :(',
   OVER_MAX_SUMMARYLENGTH: '摘要不能超出150个字符',
   EMAIL_EXISTS: '该邮箱已经被使用 :(',
-  USERNAME_MAXLEN_ERROR: '用户名最多24个字 :(',
+  USERNAME_MAXLEN_ERROR: '用户名称最多24个字 :(',
   CONTENT_MAXLEN_ERROR: '内容最多30个字 :(',
   REMARK_MAXLEN_ERROR: '备注最多24个字 :(',
   PASSWORD_ERROR: '密码错误 :(',
@@ -46,9 +37,7 @@ const constant = {
 
   // 列表加载提示语
   OTHER_FRIEND_REQUESTING: '您已经发起了将对方添加为{{FRIEND_NAME}}的申请',
-  NO_TROUBLE: '当前没有内容。',
-  NO_DIARYS: '当前没有内容。',
-  No_SHARE: '当前没有内容。',
+  NO_MIND: '您当前内心很清净 : )',
   NO_CLASSICS: '当前没有内容。',
   NO_USER_RESULT: '抱歉，未找到该用户~',
   NO_TRANSLATE: '当前章节没有译文。',
@@ -61,7 +50,7 @@ const constant = {
 
   PANNAME_SET_TIPS: '为保护您的个人信息，对外发布内容，请设置一个可以公开的笔名。',
 
-  FRIEND_NAME: '知己',
+  FRIEND_NAME: '有缘人',
   ANONYMOUS_NAME: '匿名',
 
   // 列表分页
@@ -70,15 +59,40 @@ const constant = {
 
   // 功能
   FEATURES: {
-    HEART: '心',
+    MIND: '心',
     KARMA: '缘',
     CLASSIC: '知',// '著作经典',
-    // DIARY: '心语',// '心情杂记',
-    // HELP: '心结',// '排忧解难',
-    // SHARE: '心得',// '心得感悟', // '原创分享',
   },
 
-  // 版块
+  // 心念类型
+  MIND_TYPE: {
+    DIARY: {
+      name: '心语',
+      id: 'diary'
+    },
+    HELP: {
+      name: '心结',
+      id: 'help'
+    },
+    SHARE: {
+      name: '心得',
+      id: 'share'
+    }
+  },
+
+  // 慈悲类型
+  KARMA_TYPE: {
+    THANK: {
+      name: '受益',
+      id: 'thank'
+    },
+    UNDERSTAND: {
+      name: '理解',
+      id: 'understand'
+    },
+  },
+
+  // 书写类型
   COLUMNS: {
     SENTENCE: {
       name: '句子',// '鸡汤句子',
@@ -88,14 +102,6 @@ const constant = {
       name: '文章',// '散文诗歌',
       id: 'literature'
     },
-    /* NATURAL: {
-      name: '古朴原生态',
-      id: 'natural'
-    },
-    GIVING: {
-      name: '日行一善',
-      id: 'giving'
-    }, */
   },
 
   // 错误

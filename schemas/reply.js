@@ -16,4 +16,16 @@ let replySchema = new Schema({
   created_date: { type: Date, default: Date.now },
 })
 
+replySchema.virtual('author', {
+  ref: 'User',
+  localField: 'creator_id',
+  foreignField: '_id'
+})
+
+replySchema.virtual('friend', {
+  ref: 'Friend',
+  localField: 'creator_id',
+  foreignField: 'recipient'
+})
+
 module.exports = replySchema
