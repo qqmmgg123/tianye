@@ -13,6 +13,8 @@ const fullRenderer = require('./fullRenderer')
 const mongoose = require('mongoose')
 const User = require('./models/user')
 const Verification = require('./models/verification')
+const Message = require('./models/message')
+const Mind = require('./models/mind')
 const Diary = require('./models/diary')
 const Trouble = require('./models/trouble')
 const Share = require('./models/share')
@@ -130,16 +132,14 @@ app.use(passport.session())
 
 // 访问需要验证用户
 router.get([
+  '/notification',
+  '/features/mind',
+  '/features/found',
   '/friend',
   '/user/search',
-  '/features/diary',
-  '/features/help',
-  '/diary/latest',
-  '/diary/:id',
-  // '/diary/:id/modify',
   '/help/:id',
   '/recommend/helps',
-  '/share/:id/modify',
+  '/mind/:id/modify',
   '/classic/:id/modify',
   '/classic/:id/section/create',
   '/section/:id/modify',
@@ -156,15 +156,11 @@ router.get([
 
 // 写入需要验证用户
 router.use([
-  '/diary',
-  '/trouble',
-  '/share',
+  '/mind',
   '/classic',
-  '/thank/:shareId',
+  '/thank/:mindId',
   '/:type/:id/reply',
-  '/diary/:id',
-  '/trouble/:id',
-  '/share/:id',
+  '/mind/:id',
   '/classic/:id',
   '/reply/:id',
   '/panname',
@@ -521,8 +517,6 @@ router.post('/email/vcode',async (ctx)=>{
 
 // 记录当前页面url状态
 router.get([
-  '/features/heart',
-  '/features/karma',
   '/features/diary',
   '/features/help',
   '/features/share',
@@ -536,20 +530,22 @@ router.get([
   return next()
 })
 
-// 知己
+// 返回小红点数据
+router.get('/notification', async (ctx, next) => {
+  const { user } = ctx.state
+  const notification = await Message.find({
+    recipient: user._id
+  }).lean()
+
+  ctx.body = {
+    success: true,
+    notification,
+  }
+})
+
+// 有缘人
 router.get('/friend', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
   let { user } = ctx.state
-
   let friends = await Friend.aggregate(
     [
      { '$lookup': {
@@ -574,6 +570,8 @@ router.get('/friend', async (ctx, next) => {
         'status': 1,
         'content': 1,
         'remark': 1,
+        'shareHelp': 1,
+        'shareShare': 1,
         'recipient_status': { '$ifNull': [ { "$min": "$friend.status" }, 0 ] },
         'recipient_id': '$user._id',
         'recipient_name': '$user.username',
@@ -581,15 +579,23 @@ router.get('/friend', async (ctx, next) => {
     ]
   )
 
-  // 返回并渲染
-  await ctx.fullRender('friend', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    friends,
-    info
+  await Message.updateOne({ 
+    recipient: user._id,
+    feature: 'karma',
+    sub_feature: 'friend',
+  }, 
+  { $set: { 
+    has_new: false
+  }},     
+  {
+    upsert: true
   })
 
-  ctx.session.info = null
+  // 返回数据
+  ctx.body = {
+    success: true,
+    friends,
+  }
 })
 
 // 获取指定用户公开信息
@@ -696,7 +702,7 @@ router.get('/user/search', async (ctx, next) => {
 
 
 // 心
-router.get('/features/heart', async (ctx, next) => {
+router.get('/features/mind', async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
@@ -706,96 +712,137 @@ router.get('/features/heart', async (ctx, next) => {
 
   // 分页
   let { query } = ctx.request
-  let range = +query.range || constant.PAGE_RANGE
   let page = +query.page || 1
   let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
-  let index = range / 2
-  let lastIndex = range - index
 
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  // 心语总数
-  let total = await Diary.estimatedDocumentCount()
+  // 心念总数
+  let total = await Mind.estimatedDocumentCount()
   let totalPage = Math.ceil(total / limit)
-  let pageInfo = null
-
   const nextPage = page < totalPage ? page + 1 : 0
-  if (ctx.state.isXhr) {
-    pageInfo = {
-      nextPage
-    }
-  } else {
-    pageInfo = {
-      currPage: page,
-      prevPage: page > 1 ? page - 1 : 0,
-      pages: pageRange(
-        Math.max(1, page + 1 - index), 
-        Math.min(totalPage, page + lastIndex)
-      ),
-      nextPage
-    }
+  const pageInfo = {
+    nextPage
   }
 
   let { user } = ctx.state
 
   // 查找所有记录
-  let minds = await User.aggregate(
-    [
-      { '$lookup': {
-        'from': Diary.collection.name,
-        'localField': '_id',
-        'foreignField': 'creator_id',
-        'as': 'diary'
-      }},
-      { '$lookup': {
-        'from': Trouble.collection.name,
-        'localField': '_id',
-        'foreignField': 'creator_id',
-        'as': 'help'
-      }},
-      { '$lookup': {
-        'from': Share.collection.name,
-        'localField': '_id',
-        'foreignField': 'creator_id',
-        'as': 'share'
-      }},
-      { '$match': { '_id': user._id }},
-      { '$group': { '_id': null, 'data':{ '$push':{ 'user': '$$ROOT', 'diary': '$diary', 'help': '$help', 'share': '$share' } }, 'count': { '$sum': 1 } } },
-      { '$unwind': '$data' },
-      {
-        '$project': {
-          '_id': '$data.diary._id',
-          'content': '$data.diary.content',
-          'count': 1
-        }
-      },
-      { '$sort': { 'created_date': -1 } },
-      { "$limit": 5 }
-    ]
-  )
+  let minds = await Mind.find({
+    creator_id: user._id
+  })
+    /*.select([
+      '_id', 
+      'type_id', 
+      'column_id', 
+      'title', 
+      'content', 
+      'is_extract', 
+      'summary', 
+      'ref_id',
+      'created_date',
+      'updated_date',
+      'last_reply_date',
+      'last_reply_id',
+      'state_change_date', 
+      'creator_id'].join(' '))*/
+    .populate({
+      path: 'new_reply', 
+      select: 'creator_id content',
+      model: 'Reply',
+      populate: [{
+        path: 'author',
+        select: 'panname username',
+        model: 'User'
+      }, {
+        path: 'friend',
+        select: 'remark',
+        model: 'Friend',
+        match: { requester: user._id }
+      }],
+    })
+    .populate({
+      path: 'quote',
+      select: 'title summary',
+      model: 'Classic'
+    })
+    .sort({ state_change_date: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean()
 
   // 返回并渲染首页
   ctx.body = {
+    success: true,
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
     features: constant.FEATURES,
-    noDataTips: constant.NO_DIARYS,
+    noDataTips: constant.NO_MIND,
     pageInfo,
     minds,
-    info
   }
 })
 
-// 心情杂记
-router.get('/features/diary', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
+// 随缘
+router.get('/features/found', async (ctx, next) => {
+  const { user } = ctx.state
+
+  // 分页
+  let { query } = ctx.request
+  let page = +query.page || 1
+  let limit = +query.perPage || constant.LIST_LIMIT
+  let skip = (page - 1) * limit
+
+  // 心念总数
+  let total = await Mind.estimatedDocumentCount()
+  let totalPage = Math.ceil(total / limit)
+  const nextPage = page < totalPage ? page + 1 : 0
+  const pageInfo = {
+    nextPage
+  }
+
+  // 查找所有记录
+  let minds = await Mind.find({
+    type_id: { $in: ['help', 'share'] },
+    creator_id: { $ne: user._id }
   })
+  .select([
+    '_id', 
+    'type_id', 
+    'column_id', 
+    'title', 
+    'content', 
+    'is_extract', 
+    'summary', 
+    'created_date', 
+    'creator_id'].join(' '))
+  .sort({ state_change_date: -1 })
+  .skip(skip)
+  .limit(limit)
+  .lean()
+
+  // 受益状态
+  let mindIds = minds.map(mind => mind._id)
+  let thanks = await Thank.find({
+    basis_id: { $in: mindIds },
+    giver_id: user.id
+  }).lean()
+  minds = minds.map(mind => {
+    mind.isThanked = thanks.findIndex(
+      thank => thank.basis_id.equals(mind._id)) > -1
+    return mind
+  })
+
+  // 返回并渲染首页
+  ctx.body = {
+    success: true,
+    pageInfo,
+    minds,
+  }
+})
+
+// 投缘
+router.get('/features/diary', async (ctx, next) => {
+  let { user } = ctx.state
 
   // 分页
   let { query } = ctx.request
@@ -804,70 +851,195 @@ router.get('/features/diary', async (ctx, next) => {
   let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
   let index = range / 2
-  let lastIndex = range - index
 
-  // 来源页错误信息
-  let info = ctx.session.info
+  let fateMatch = {
+    $match: { 
+      $expr: {
+        $or: [
+          { "$eq": [ "$giver_id", user._id ] }, 
+          { "$eq": [ "$winner_id", user._id ] }
+        ]
+      }
+    }
+  }
 
   // 心语总数
-  let total = await Diary.estimatedDocumentCount()
-  let totalPage = Math.ceil(total / limit)
-  let pageInfo = null
+  let totalQueryResult = await Thank.aggregate(
+    [
+      fateMatch,
+      { $group: { _id: '$giver_id', total: { $sum: 1 } } },
+      { $project: { _id: 0 } }
+    ]
+  )
+  let total = totalQueryResult 
+    && totalQueryResult[0] 
+    && totalQueryResult[0].total 
+    || 0
 
-  const nextPage = page < totalPage ? page + 1 : 0
-  if (ctx.state.isXhr) {
-    pageInfo = {
-      nextPage
-    }
-  } else {
-    pageInfo = {
-      currPage: page,
-      prevPage: page > 1 ? page - 1 : 0,
-      pages: pageRange(
-        Math.max(1, page + 1 - index), 
-        Math.min(totalPage, page + lastIndex)
-      ),
-      nextPage
-    }
+  let totalPage = Math.ceil(total / limit)
+  let pageInfo = {
+    nextPage: page < totalPage ? page + 1 : 0
   }
 
   // 查找所有记录
-  let diarys = await Diary.find({})
-    .select('_id content updated_date creator_id')
-    .sort({ updated_date: -1, created_date: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
+  let diarys = await Thank.aggregate(
+    [
+      fateMatch,
+      {
+        $project: {
+          giver_id: 1,
+          winner_id: 1,
+          user_id: {
+            $cond: {
+              if: { '$eq': [ '$winner_id', user._id ] },
+              then: '$giver_id',
+              else: '$winner_id'
+            }
+          },
+          type_id: 1,
+         oThanks: {
+            $cond: {
+              if: { '$eq': [ '$giver_id', user._id ] },
+              then: {            
+                $cond: {
+                  if: { $eq: ['$type_id', 'thank'] },
+                  then: 1,
+                  else: 0
+                }
+              },
+              else: 0
+            }
+          },
+          oUnderstands: {
+            $cond: {
+              if: { '$eq': [ '$giver_id', user._id ] },
+              then: {            
+                $cond: {
+                  if: { $eq: ['$type_id', 'understand'] },
+                  then: 1,
+                  else: 0
+                }
+              },
+              else: 0
+            }
+          },
+          mThanks: {
+            $cond: {
+              if: { '$eq': [ '$winner_id', user._id ] },
+              then: {            
+                $cond: {
+                  if: { $eq: ['$type_id', 'thank'] },
+                  then: 1,
+                  else: 0
+                }
+              },
+              else: 0
+            }
+          },
+          mUnderstands: {
+            $cond: {
+              if: { '$eq': [ '$winner_id', user._id ] },
+              then: {            
+                $cond: {
+                  if: { $eq: ['$type_id', 'understand'] },
+                  then: 1,
+                  else: 0
+                }
+              },
+              else: 0
+            }
+          },
+        }
+      },
+      {
+        $group : {
+          _id : '$user_id',
+          mThankTotal: { $sum: '$mThanks' },
+          mUnderstandTotal: { $sum: '$mUnderstands' },
+          oThankTotal: { $sum: '$oThanks' },
+          oUnderstandTotal: { $sum: '$oUnderstands' },
+        }
+      },
+      { $lookup: {
+        from: Friend.collection.name,
+        let: { 'user_id': '$_id' },
+        pipeline: [{ 
+          $match: { 
+            requester: user._id,
+            $expr: { $eq: [ '$recipient', '$$user_id' ] }
+          }
+        }],
+        as: 'requester'
+      }},
+      { $lookup: {
+        from: Friend.collection.name,
+        let: { 'user_id': '$_id' },
+        pipeline: [{ 
+          $match: { 
+            recipient: user._id,
+            $expr: { $eq: [ '$requester', '$$user_id' ] }
+          }
+        }],
+        as: 'recipient'
+      }},
+      { $lookup: {
+        from: User.collection.name,
+        localField: '_id',
+        foreignField: '_id',
+        as: 'giver'
+      }},
+      { $unwind: '$giver' },
+      {
+        $match: { 
+          $expr: {
+            $and: [
+              {
+                $eq: [{
+                  $ifNull: [{ 
+                    $min: '$requester.status' 
+                  }, 0]
+                }, 0] 
+              }, {
+                $eq: [{
+                  $ifNull: [{ 
+                    $min: '$recipient.status' 
+                  }, 0]
+                }, 0] 
+              }, 
+            ]
+          }, 
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          panname: '$giver.panname',
+          oThankTotal: 1,
+          oUnderstandTotal: 1,
+          mThankTotal: 1,
+          mUnderstandTotal: 1,
+          total: { 
+            $add: [
+              '$mThankTotal', 
+              '$mUnderstandTotal', 
+              '$oThankTotal', 
+              '$oUnderstandTotal'
+            ] 
+          }
+        }
+      },
+      { $sort: { 'total': -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    ]
+ )
 
   // 返回并渲染首页
-  await ctx.fullRender('diary', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    diaryHolder: constant.DIARY_HOLDER,
-    features: constant.FEATURES,
-    noDataTips: constant.NO_DIARYS,
-    pageInfo,
-    diarys,
-    info
-  })
-
-  ctx.session.info = null
-})
-
-
-// 获得最新心语
-router.get('/diary/latest', async (ctx, next) => {
-
-  let diary = await Diary.findOne()
-    .select('_id content updated_date')
-    .sort({created_date: -1})
-    .lean()
-
   ctx.body = {
     success: true,
-    diary,
+    pageInfo,
+    diarys
   }
-
 })
 
 // 分享内容页
@@ -934,14 +1106,8 @@ router.get('/diary/:id', async (ctx, next) => {
   ctx.session.info = null
 })*/
 
-// 排忧解难
+// 渡缘
 router.get('/features/help', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_MINE_PAGE
-    ].join('——')
-  })
   let { user } = ctx.state
   let friendQuery = [{ '$lookup': {
     'from': Friend.collection.name,
@@ -965,22 +1131,44 @@ router.get('/features/help', async (ctx, next) => {
     }],
     'as': 'recipient'
   }}]
-  let friendMatch = { '$match': {  "$expr": { '$or': [{ '$and': [{ '$eq': [{ '$min': '$recipient.status' }, 3] }, { '$eq': [{ '$min':'$requester.status' }, 3] }] }, {'$eq': ['$creator_id', user._id]}]}}}
+  let friendMatch = { 
+    '$match': {  
+      '$expr': {
+        '$and' : [
+          { 
+            '$eq': ['$recipient.status', 3] 
+          }, { 
+            '$eq': ['$requester.status', 3]
+          }, {
+            '$or': [
+              {
+                '$and': [
+                  { '$eq': ['$recipient.shareHelp', true] },
+                  { '$eq': ['$type_id', 'help'] },
+                ]
+              }, {
+                '$and': [
+                  { '$eq': ['$recipient.shareShare', true] },
+                  { '$eq': ['$type_id', 'share'] },
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
   // 分页
   let { query } = ctx.request
-  let range = +query.range || constant.PAGE_RANGE
   let page = +query.page || 1
   let limit = +query.limit || constant.LIST_LIMIT
   let skip = (page - 1) * limit
-  let index = range / 2
-  let lastIndex = range - index
-
-  // 来源页错误信息
-  let info = ctx.session.info
 
   // 我的烦恼总数
-  let totalQueryResult = await Trouble.aggregate([
+  let totalQueryResult = await Mind.aggregate([
     ...friendQuery,
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
     friendMatch,
     { $count: 'total' }
   ])
@@ -989,26 +1177,11 @@ router.get('/features/help', async (ctx, next) => {
     && totalQueryResult[0].total 
     || 0
   let totalPage = Math.ceil(total / limit)
-  let pageInfo = null
-
-  const nextPage = page < totalPage ? page + 1 : 0
-  if (ctx.state.isXhr) {
-    pageInfo = {
-      nextPage
-    }
-  } else {
-    pageInfo = {
-      currPage: page,
-      prevPage: page > 1 ? page - 1 : 0,
-      pages: pageRange(
-        Math.max(1, page + 1 - index), 
-        Math.min(totalPage, page + lastIndex)
-      ),
-      nextPage
-    }
+  let pageInfo = {
+    nextPage: page < totalPage ? page + 1 : 0
   }
 
-  let helps = await Trouble.aggregate(
+  let helps = await Mind.aggregate(
     [
       ...friendQuery,
       { '$lookup': {
@@ -1072,7 +1245,34 @@ router.get('/features/help', async (ctx, next) => {
             'foreignField': '_id',
             'as': 'classic'
           }},
-          { '$match': {  '$expr': {'$and': [{ "$eq": [ "$parent_id", "$$trouble_id" ] }, { '$or': [{ '$and': [{ '$eq': [{ '$min': '$recipient.status' }, 3] }, { '$eq': [{ '$min':'$requester.status' }, 3] }] }, { '$eq': ['$creator_id', user._id ]}]}]}}},
+          { 
+            '$match': { 
+              '$expr': { 
+                '$and': [
+                  { 
+                    "$eq": [ 
+                      "$parent_id", 
+                      "$$trouble_id" 
+                    ]
+                  }, { 
+                    '$or': [
+                      { 
+                        '$and': [
+                          { 
+                            '$eq': [{ '$min': '$recipient.status' }, 3]
+                          }, { 
+                            '$eq': [{ '$min':'$requester.status' }, 3] 
+                          }
+                        ]
+                      }, { 
+                        '$eq': ['$creator_id', user._id]
+                      }
+                    ]
+                  },
+                ]
+              }
+            }
+          },
           { '$group': { '_id': '$parent_id', 'data':{ '$push':{ 'rs': '$$ROOT', 'us': '$user', 'rus': '$receiver', 'rec': '$recipient', 'rrec': '$rreceiver', 'ref': '$classic' } }, 'count': { '$sum': 1 } } },
           { '$unwind': '$data' },
           {
@@ -1097,10 +1297,15 @@ router.get('/features/help', async (ctx, next) => {
         ],
         'as': 'replies'
       }},
+      { $unwind: '$recipient'},
+      { $unwind: '$requester'},
       friendMatch,
       { '$project': {
         '_id': 1,
-        'content': 1,
+        'type_id': 1,
+        'column_id': 1,
+        'summary': 1,
+        'is_extract': 1,
         'replies': '$replies',
         'creator_id': 1,
         'last_reply_date': 1,
@@ -1114,31 +1319,54 @@ router.get('/features/help', async (ctx, next) => {
       { "$limit": limit }
     ]
   )
+
+  let friendTotal = 1
+  if (!helps || !helps.length) {
+    let friends = await Friend.aggregate(
+      [
+        { $lookup: {
+          from: Friend.collection.name,
+          let: { 'recipient': '$recipient' },
+          pipeline: [
+            { $match: { 
+              recipient: user._id,
+              $expr: { $eq: [ '$requester', '$$recipient' ] }
+            }},
+          ],
+          as: 'friend'
+        }},
+        { $unwind: '$friend' },
+        { $match: {
+          requester: user._id,
+          status: 3,
+          $expr: {
+            $and: [{ 
+              $eq: ['$friend.status', 3] 
+            }, { 
+              $eq: ['$friend.requester', '$recipient'] 
+            }]
+          }
+        }},
+        { $count: 'total' }
+      ]
+    )
+    friendTotal = friends 
+      && friends[0] 
+      && friends[0].total 
+      || 0
+  }
   
-  await ctx.fullRender('helps', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    troubleHolder: constant.TROUBLE_HOLDER,
-    noDataTips: constant.NO_TROUBLE,
-    features: constant.FEATURES,
+  ctx.body = {
+    success: true,
+    friendTotal,
     pageInfo,
     helps,
-    info
-  })
-
-  ctx.session.info = null
+  }
 })
 
 // 获取具体排忧解难
 router.get('/help/:id', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_MINE_PAGE
-    ].join('——')
-  })
   let { user } = ctx.state
-  let info = ctx.session.info
 
   // 分页
   let { query } = ctx.request
@@ -1150,7 +1378,7 @@ router.get('/help/:id', async (ctx, next) => {
   let lastIndex = range - index
   
   let troubleId = mongoose.Types.ObjectId(ctx.params.id)
-  let helps = await Trouble.aggregate(
+  let helps = await Mind.aggregate(
     [
       { '$lookup': {
         'from': User.collection.name,
@@ -1259,12 +1487,9 @@ router.get('/help/:id', async (ctx, next) => {
   // 我的烦恼总数
   let totalPage = Math.ceil(help.reply_count / limit)
 
-  await ctx.fullRender('help', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    troubleHolder: constant.TROUBLE_HOLDER,
+  ctx.body = {
+    success: true,
     noDataTips: constant.NO_MINE_TROUBLE,
-    features: constant.FEATURES,
     pageInfo: {
       currPage: page,
       prevPage: page > 1 ? page - 1 : 0,
@@ -1274,11 +1499,8 @@ router.get('/help/:id', async (ctx, next) => {
       ),
       nextPage: page < totalPage ? page + 1 : 0,
     },
-    help,
-    info
-  })
-
-  ctx.session.info = null
+    help
+  }
 })
 
 // 获得推荐时的忧扰
@@ -1306,7 +1528,34 @@ router.get('/recommend/helps', async (ctx, next) => {
     }],
     'as': 'recipient'
   }}]
-  let friendMatch = { '$match': {  "$expr": { '$or': [{ '$and': [{ '$eq': [{ '$min': '$recipient.status' }, 3] }, { '$eq': [{ '$min':'$requester.status' }, 3] }] }, {'$eq': ['$creator_id', user._id]}]}}}
+
+  let friendMatch = { 
+    $match: {  
+      $expr: {
+        $and: [
+          { 
+            $eq: ['$recipient.status', 3] 
+          }, { 
+            $eq: ['$requester.status', 3]
+          }, {
+            $or: [
+              {
+                $and: [
+                  { $eq: ['$recipient.shareHelp', true] },
+                  { '$eq': ['$type_id', 'help'] },
+                ]
+              }, {
+                $and: [
+                  { $eq: ['$recipient.shareShare', true] },
+                  { $eq: ['$type_id', 'share'] },
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }        
   // 分页
   let { query } = ctx.request
   let page = +query.page || 1
@@ -1314,8 +1563,10 @@ router.get('/recommend/helps', async (ctx, next) => {
   let skip = (page - 1) * limit
 
   // 我的烦恼总数
-  let totalQueryResult = await Trouble.aggregate([
+  let totalQueryResult = await Mind.aggregate([
     ...friendQuery,
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
     friendMatch,
     { $count: 'total' }
   ])
@@ -1327,7 +1578,7 @@ router.get('/recommend/helps', async (ctx, next) => {
   let nextPage = page < totalPage ? page + 1 : 0
   let pageInfo = { nextPage }
   let info = ctx.session.info
-  let helps = await Trouble.aggregate(
+  let helps = await Mind.aggregate(
     [
       ...friendQuery,
       { '$lookup': {
@@ -1336,6 +1587,8 @@ router.get('/recommend/helps', async (ctx, next) => {
         'foreignField': '_id',
         'as': 'user'
       }},
+      { $unwind: '$recipient'},
+      { $unwind: '$requester'},
       friendMatch,
       { '$project': {
         '_id': 1,
@@ -1520,80 +1773,17 @@ router.get('/column/:id', async (ctx, next) => {
   }
 })
 
-// 分享内容页
-router.get('/share/:id', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  // 查找所有烦恼
-  let shareId = ctx.params.id
-  let share = await Share.findById(
-    shareId)
-    .populate('author', 'panname')
-    .select('_id column_id title content creator_id')
+// 心念
+router.get('/mind/:id', async (ctx, next) => {
+  let mindId = ctx.params.id
+  let mind = await Mind.findById(mindId)
+    .select('_id type_id column_id title content state_change_date')
     .lean()
 
-  // 赞叹状态
-  let { user } = ctx.state
-  if (user && user.id && share) {
-    let thank = await Thank.findOne({
-      basis_id: shareId,
-      giver_id: user.id
-    }).lean()
-    share.isThanked = !!thank
+  ctx.body = {
+    success: true,
+    mind
   }
-
-  // 返回并渲染首页
-  await ctx.fullRender('share', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    share,
-    backPage: '/features/share',
-    info
-  })
-
-  ctx.session.info = null
-})
-
-// 分享编辑页
-router.get('/share/:id/modify', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  // 查找所有烦恼
-  let share = await Share.findById(
-    ctx.params.id)
-    .select('_id column_id title content')
-    .lean()
-
-  // 返回并渲染首页
-  await ctx.fullRender('sharemodify', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    shareHolder: constant.SHARE_HOLDER,
-    shareColumnHolder: constant.SHARE_COLUMN_HOLDER,
-    features: constant.FEATURES,
-    columns: constant.COLUMNS,
-    share,
-    backPage: '/features/share',
-    info
-  })
-
-  ctx.session.info = null
 })
 
 // 引经据典
@@ -2083,156 +2273,59 @@ router.get('/config', async (ctx, next) => {
   ctx.session.info = null
 })
 
-// 添加日记
-router.post('/diary', async (ctx) => {
-  const { content = '' } = ctx.request.body
-  const { user } = ctx.state
-  let info = ''
-  let diary = null
-  try {
-    diary = await Diary.create({ 
-      content,
-      creator_id: user.id
-    })
-  } catch (err) {
-    info = filterMsg(err.message)
-  }
-  if (ctx.state.isXhr) {
-    if (!info) {
-      ctx.body = {
-        success: true,
-        diary,
-      }
-    } else {
-      ctx.body = {
-        success: false,
-        info,
-      }
-    }
-  } else {
-    ctx.session.info = info
-    ctx.redirect('/features/diary')
-    ctx.status = 302
-  }
-})
-
-// 心语修改
-router.put('/diary/:id', async (ctx) => {
-  const { id } = ctx.params
-  const { content } = ctx.request.body
-  const { user } = ctx.state
-  const now = new Date()
-  // const is_extract = content.length > constant.SUMMARY_LIMIT - 3
-  // const summary = is_extract
-    // ? Share.extract(content)
-    // : content 
-  try {
-    await Diary.updateOne({
-      _id: id,
-      creator_id: user._id
-    }, { 
-      $set: { 
-        content, 
-        updated_date: now
-      },
-    }, { 
-      runValidators: true,
-      upsert: true
-    })
-    ctx.body = {
-      success: true,
-      diary: {
-        _id: id,
-        content,
-        updated_date: now
-      },
-    }
-  } catch (err) {
-    ctx.body = {
-      success: false,
-      info: err.message
-    }
-  }
-})
-
-// 添加烦恼
-router.post('/trouble', async (ctx) => {
-  const { content } = ctx.request.body
+// 发布心念
+router.post('/mind', async (ctx) => {
+  const { type_id, content, title, column_id, ref_id } = ctx.request.body
   const { user } = ctx.state
   let info = ''
   try {
-    await Trouble.create({ 
-      content,
-      creator_id: user.id
-    })
-  } catch (err) {
-    info = filterMsg(err.message)
-  }
-  if (ctx.state.isXhr) {
-    if (!info) {
-      ctx.body = {
-        success: true
-      }
-    } else {
-      ctx.body = {
-        success: false,
-        info,
-      }
-    }
-  } else {
-    ctx.session.info = info
-    ctx.redirect('/features/help')
-    ctx.status = 302
-  }
-})
-
-// 原创分享
-router.post('/share', async (ctx) => {
-  const { content, title, column_id } = ctx.request.body
-  const { user } = ctx.state
-  let info = ''
-  try {
-    await Share.create({ 
+    await Mind.create({ 
+      type_id,
       title,
       content,
       creator_id: user.id,
-      column_id
+      column_id,
+      ref_id
     })
   } catch (err) {
     info = filterMsg(err.message)
   }
-  if (ctx.state.isXhr) {
-    if (!info) {
-      ctx.body = {
-        success: true
-      }
-    } else {
-      ctx.body = {
-        success: false,
-        info,
-      }
+  if (!info) {
+    ctx.body = {
+      success: true
     }
   } else {
-    ctx.session.info = info
-    ctx.redirect('/features/share')
-    ctx.status = 302
+    ctx.body = {
+      success: false,
+      info,
+    }
   }
 })
 
-// 原创分享修改
-router.put('/share/:id', async (ctx) => {
-  const { content, title, column_id } = ctx.request.body
+// 心念更新
+router.put('/mind/:id', async (ctx) => {
+  const { type_id, content, title, column_id } = ctx.request.body
   const { user } = ctx.state
   const is_extract = content.length > constant.SUMMARY_LIMIT - 3
   const summary = is_extract
     ? Share.extract(content)
     : content 
+  const now = new Date()
   try {
-    await Share.updateOne({
+    await Mind.updateOne({
       _id: ctx.params.id,
       creator_id: user._id
     }, { 
-      $set: { title, summary, content, column_id, is_extract },
+      $set: { 
+        type_id, 
+        title, 
+        summary, 
+        content, 
+        column_id, 
+        is_extract,
+        updated_date: now,
+        state_change_date: now,
+      },
     }, { 
       runValidators: true,
       upsert: true
@@ -2398,18 +2491,21 @@ router.put('/translate/:id', async (ctx) => {
   }
 })
 
-// 赞叹
-router.post('/thank/:shareId', async (ctx, next) => {
-  const { shareId } = ctx.params
+// 受益和理解
+router.post('/thank/:mindId', async (ctx, next) => {
+  const { mindId } = ctx.params
+  const { typeId } = ctx.request.body
+  console.log(typeId)
   const { user } = ctx.state
-  let share = await Share.findOneAndUpdate(
-    { _id: shareId },
-    { $inc: { thank: 1 } }
+  let mind = await Mind.findById(
+    mindId, 
+    'creator_id'
   )
   await Thank.create({
+    type_id: typeId,
     giver_id: user.id,
-    winner_id: share.creator_id,
-    basis_id: shareId,
+    winner_id: mind.creator_id,
+    basis_id: mindId,
   })
   ctx.body = {
     success: true
@@ -2437,6 +2533,31 @@ router.post('/:type/:id/reply', async (ctx, next) => {
       receiver_id,
       ref_id
     })
+
+    let now = new Date()
+
+    // 更新回复时间
+    await Mind.updateOne(
+      { _id: parent_id },
+      { $set: { last_reply_date: now, last_reply_id: reply._id, state_change_date: now }},
+      { 
+        runValidators: true,
+        upsert: true
+      }
+    )
+
+    // 发送回复通知
+    await Message.updateOne({ 
+      recipient: receiver_id,
+      feature: 'mind',
+    }, 
+    { $set: { 
+      has_new: false
+    }},     
+    {
+      upsert: true
+    })
+
     ctx.body = {
       success: true,
       reply
@@ -2479,13 +2600,13 @@ router.post('/panname', async (ctx) => {
   }
 }) 
 
-// 发送添加知己请求
+// 发送添加有缘人请求
 router.post('/friend/:id/send', async (ctx, next) => {
   const { user } = ctx.state,
   { id } = ctx.params,
-  { remark, content } = ctx.request.body
+  { remark, content, shareHelp, shareShare } = ctx.request.body
 
-  // 不能添加自己为知己
+  // 不能添加自己为有缘人
   if (user._id.equals(id)){
     ctx.body = {
       success: false,
@@ -2522,7 +2643,7 @@ router.post('/friend/:id/send', async (ctx, next) => {
 
     let relation = relations[0] || {}
 
-    // 对方已经是自己知己
+    // 对方已经是自己有缘人
     if (relation.status === 3 && relation.recipient_status === 3) {
       ctx.body = {
         success: false,
@@ -2531,7 +2652,7 @@ router.post('/friend/:id/send', async (ctx, next) => {
       return
     }
     
-    // 您已经发起了将对方添加为知己的申请
+    // 您已经发起了将对方添加为有缘人的申请
     if (relation.status === 1 && relation.recipient_status === 2) {
       ctx.body = {
         success: false,
@@ -2540,7 +2661,7 @@ router.post('/friend/:id/send', async (ctx, next) => {
       return
     }
 
-    // 对方正在申请您为知己
+    // 对方正在申请您为有缘人
     if (relation.status === 2 && relation.recipient_status === 1) {
       ctx.body = {
         success: false,
@@ -2549,10 +2670,10 @@ router.post('/friend/:id/send', async (ctx, next) => {
       return
     }
   
-    // 更新知己状态
+    // 更新有缘人状态
     await Friend.updateOne(
       { requester: user.id, recipient: id },
-      { $set: { status: 1, remark }},
+      { $set: { status: 1, remark, shareHelp, shareShare }},
       { 
         runValidators: true, 
         upsert: true, 
@@ -2568,6 +2689,21 @@ router.post('/friend/:id/send', async (ctx, next) => {
         new: true 
       }
     )
+    await Message.updateOne({ 
+      recipient: id,
+      feature: 'karma',
+      sub_feature: 'friend',
+    }, 
+    { $set: { 
+      recipient: id,
+      feature: 'karma',
+      sub_feature: 'friend',
+      has_new: true
+    }},     
+    {
+      upsert: true, 
+      new: true 
+    })
     ctx.body = {
       success: true
     }
@@ -2579,13 +2715,13 @@ router.post('/friend/:id/send', async (ctx, next) => {
   }
 })
 
-// 同意添加知己请求
+// 同意添加有缘人请求
 router.put('/friend/:id/accept', async (ctx, next) => {
   const { user } = ctx.state,
   { id } = ctx.params,
-  { remark } = ctx.request.body
+  { remark, shareHelp, shareShare } = ctx.request.body
 
-  // 不能添加自己为知己
+  // 不能添加自己为有缘人
   if (user._id.equals(id)){
     ctx.body = {
       success: false,
@@ -2622,7 +2758,7 @@ router.put('/friend/:id/accept', async (ctx, next) => {
 
     let relation = relations[0] || {}
 
-    // 对方已经是自己知己
+    // 对方已经是自己有缘人
     if (relation.status === 3 && relation.recipient_status === 3) {
       ctx.body = {
         success: false,
@@ -2635,7 +2771,7 @@ router.put('/friend/:id/accept', async (ctx, next) => {
     if (relation.status === 2 && relation.recipient_status === 1) {
       await Friend.updateOne(
         { requester: user.id, recipient: id },
-        { $set: { status: 3, remark }},
+        { $set: { status: 3, remark,  shareHelp, shareShare }},
         { 
           runValidators: true
         }
@@ -2665,11 +2801,12 @@ router.put('/friend/:id/accept', async (ctx, next) => {
   }
 })
 
-// 删除知己关系
+// 删除有缘人关系
 router.delete('/friend/:id/remove', async (ctx, next) => {
   const { user } = ctx.state,
   { id } = ctx.params,
   { content } = ctx.request.body
+  console.log(content)
 
   try {
     let recipient_id = mongoose.Types.ObjectId(id)
@@ -2706,20 +2843,48 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
     let isFriend = (relation.status === 3 && relation.recipient_status === 3)
     let isPending = (relation.status === 2 && relation.recipient_status === 1)
     if (!isFriend && !isPending) {
+      console.log('删除...')
       await Friend.deleteOne(
         { recipient: user.id, requester: id }
       )
     } else {
-      if (isPending) {
+      if (isFriend) {
+        console.log('移除...')
         await Friend.updateOne(
           { recipient: user.id, requester: id },
-          { $set: { content } },
+          { $set: { status: 0 } },
           { 
             runValidators: true
           }
         )
-      }
+      } else if (isPending) {
+        console.log('拒绝...')
+        await Friend.updateOne(
+          { recipient: user.id, requester: id },
+          { $set: { content }, $unset: { remark: 1 } },
+          { 
+            runValidators: true
+          }
+        )
+      } 
     }
+
+    // 发送消息给对方
+    await Message.updateOne({ 
+      recipient: id,
+      feature: 'karma',
+      sub_feature: 'friend',
+    }, 
+    { $set: { 
+      recipient: id,
+      feature: 'karma',
+      sub_feature: 'friend',
+      has_new: true
+    }},     
+    {
+      upsert: true, 
+      new: true 
+    })
 
     ctx.body = {
       success: true
@@ -2736,11 +2901,11 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
 router.put('/friend/:id/remark', async (ctx) => {
   const { user } = ctx.state,
   { id } = ctx.params,
-  { remark } = ctx.request.body
+  { remark, shareHelp, shareShare } = ctx.request.body
 
   await Friend.updateOne(
     { requester: user.id, recipient: id },
-    { $set: { remark }},
+    { $set: { remark, shareHelp, shareShare }},
     { 
       runValidators: true
     }
@@ -2751,10 +2916,12 @@ router.put('/friend/:id/remark', async (ctx) => {
   }
 })
 
-// 删除记录
-router.delete('/diary/:id', async (ctx, next) => {
+
+// 消除心念
+router.delete('/mind/:id', async (ctx, next) => {
+  // 心念删除后，回复要被回收器自动清理
   try {
-    let res = await Diary.deleteOne({
+    let res = await Mind.deleteOne({
       creator_id: ctx.state.user.id,
       _id: ctx.params.id
     })
@@ -2766,57 +2933,6 @@ router.delete('/diary/:id', async (ctx, next) => {
       ctx.body = {
         success: false,
         message: '删除失败'
-      }
-    }
-  } catch (err) {
-    ctx.body = {
-      success: false,
-      message: err.message
-    }
-  }
-})
-
-// 消除烦恼
-router.delete('/trouble/:id', async (ctx, next) => {
-  // 烦恼删除后，回复要被回收器自动清理
-  try {
-    let res = await Trouble.deleteOne({
-      creator_id: ctx.state.user.id,
-      _id: ctx.params.id
-    })
-    if (res.ok && res.n) {
-      ctx.body = {
-        success: true
-      }
-    } else {
-      ctx.body = {
-        success: false,
-        message: '删除失败'
-      }
-    }
-  } catch (err) {
-    ctx.body = {
-      success: false,
-      message: err.message
-    }
-  }
-})
-
-// 删除分享
-router.delete('/share/:id', async (ctx, next) => {
-  try {
-    let res = await Share.findOneAndDelete({
-      creator_id: ctx.state.user.id,
-      _id: ctx.params.id
-    })
-    if (res) {
-      ctx.body = {
-        success: true
-      }
-    } else {
-      ctx.body = {
-        success: false,
-        message: '该内容已经被删除。'
       }
     }
   } catch (err) {

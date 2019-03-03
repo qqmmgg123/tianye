@@ -2,8 +2,8 @@ const Schema = require('mongoose').Schema
 const constant = require('../settings/const')
 
 const friendSchema = new Schema({
-  requester: { type: Schema.Types.ObjectId, ref: 'User'},
-  recipient: { type: Schema.Types.ObjectId, ref: 'User'},
+  requester: { type: Schema.Types.ObjectId, ref: 'User' },
+  recipient: { type: Schema.Types.ObjectId, ref: 'User' },
   status: {
     type: Number,
     enums: [
@@ -22,7 +22,17 @@ const friendSchema = new Schema({
     type: String,
     trim: true,
     maxlength: [24, constant.REMARK_MAXLEN_ERROR]
-  }
-}, {timestamps: true})
+  },
+  shareHelp: {
+    type: Boolean,
+    default: true
+  },
+  shareShare: {
+    type: Boolean,
+    default: true
+  },
+}, {
+  timestamps: true
+})
 
 module.exports = friendSchema
