@@ -1106,58 +1106,10 @@ router.get('/diary/:id', async (ctx, next) => {
   ctx.session.info = null
 })*/
 
-// 渡缘
+// 谈心
 router.get('/features/help', async (ctx, next) => {
   let { user } = ctx.state
-  let friendQuery = [{ '$lookup': {
-    'from': Friend.collection.name,
-    'let': { 'creator_id': '$creator_id' },
-    'pipeline': [{ 
-      '$match': { 
-        'recipient': user._id,
-        "$expr": { "$eq": [ "$requester", "$$creator_id" ] }
-      }
-    }],
-    'as': 'requester'
-  }},
-  { '$lookup': {
-    'from': Friend.collection.name,
-    'let': { 'creator_id': '$creator_id' },
-    'pipeline': [{ 
-      '$match': { 
-        'requester': user._id,
-        "$expr": { "$eq": [ "$recipient", "$$creator_id" ] }
-      }
-    }],
-    'as': 'recipient'
-  }}]
-  let friendMatch = { 
-    '$match': {  
-      '$expr': {
-        '$and' : [
-          { 
-            '$eq': ['$recipient.status', 3] 
-          }, { 
-            '$eq': ['$requester.status', 3]
-          }, {
-            '$or': [
-              {
-                '$and': [
-                  { '$eq': ['$recipient.shareHelp', true] },
-                  { '$eq': ['$type_id', 'help'] },
-                ]
-              }, {
-                '$and': [
-                  { '$eq': ['$recipient.shareShare', true] },
-                  { '$eq': ['$type_id', 'share'] },
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    }
-  }
+
   // 分页
   let { query } = ctx.request
   let page = +query.page || 1
@@ -1183,7 +1135,7 @@ router.get('/features/help', async (ctx, next) => {
 
   let helps = await Mind.aggregate(
     [
-      ...friendQuery,
+      ...Friend.friendshipQuery(user._id),
       { '$lookup': {
         'from': User.collection.name,
         'localField': 'creator_id',
@@ -1299,7 +1251,7 @@ router.get('/features/help', async (ctx, next) => {
       }},
       { $unwind: '$recipient'},
       { $unwind: '$requester'},
-      friendMatch,
+      Friend.friendshipMatch(),
       { '$project': {
         '_id': 1,
         'type_id': 1,
@@ -1320,40 +1272,10 @@ router.get('/features/help', async (ctx, next) => {
     ]
   )
 
+  // 没有内容时查询是否有有缘人
   let friendTotal = 1
   if (!helps || !helps.length) {
-    let friends = await Friend.aggregate(
-      [
-        { $lookup: {
-          from: Friend.collection.name,
-          let: { 'recipient': '$recipient' },
-          pipeline: [
-            { $match: { 
-              recipient: user._id,
-              $expr: { $eq: [ '$requester', '$$recipient' ] }
-            }},
-          ],
-          as: 'friend'
-        }},
-        { $unwind: '$friend' },
-        { $match: {
-          requester: user._id,
-          status: 3,
-          $expr: {
-            $and: [{ 
-              $eq: ['$friend.status', 3] 
-            }, { 
-              $eq: ['$friend.requester', '$recipient'] 
-            }]
-          }
-        }},
-        { $count: 'total' }
-      ]
-    )
-    friendTotal = friends 
-      && friends[0] 
-      && friends[0].total 
-      || 0
+    friendTotal = await Friend.getFriendTotal()
   }
   
   ctx.body = {
@@ -1506,56 +1428,7 @@ router.get('/help/:id', async (ctx, next) => {
 // 获得推荐时的忧扰
 router.get('/recommend/helps', async (ctx, next) => {
   let { user } = ctx.state
-  let friendQuery = [{ '$lookup': {
-    'from': Friend.collection.name,
-    'let': { 'creator_id': '$creator_id' },
-    'pipeline': [{ 
-      '$match': { 
-        'recipient': user._id,
-        "$expr": { "$eq": [ "$requester", "$$creator_id" ] }
-      }
-    }],
-    'as': 'requester'
-  }},
-  { '$lookup': {
-    'from': Friend.collection.name,
-    'let': { 'creator_id': '$creator_id' },
-    'pipeline': [{ 
-      '$match': { 
-        'requester': user._id,
-        "$expr": { "$eq": [ "$recipient", "$$creator_id" ] }
-      }
-    }],
-    'as': 'recipient'
-  }}]
 
-  let friendMatch = { 
-    $match: {  
-      $expr: {
-        $and: [
-          { 
-            $eq: ['$recipient.status', 3] 
-          }, { 
-            $eq: ['$requester.status', 3]
-          }, {
-            $or: [
-              {
-                $and: [
-                  { $eq: ['$recipient.shareHelp', true] },
-                  { '$eq': ['$type_id', 'help'] },
-                ]
-              }, {
-                $and: [
-                  { $eq: ['$recipient.shareShare', true] },
-                  { $eq: ['$type_id', 'share'] },
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    }
-  }        
   // 分页
   let { query } = ctx.request
   let page = +query.page || 1
@@ -1577,10 +1450,9 @@ router.get('/recommend/helps', async (ctx, next) => {
   let totalPage = Math.ceil(total / limit)
   let nextPage = page < totalPage ? page + 1 : 0
   let pageInfo = { nextPage }
-  let info = ctx.session.info
   let helps = await Mind.aggregate(
     [
-      ...friendQuery,
+      ...Friend.friendshipQuery(user._id),
       { '$lookup': {
         'from': User.collection.name,
         'localField': 'creator_id',
@@ -1589,7 +1461,7 @@ router.get('/recommend/helps', async (ctx, next) => {
       }},
       { $unwind: '$recipient'},
       { $unwind: '$requester'},
-      friendMatch,
+      Friend.friendshipMatch(),
       { '$project': {
         '_id': 1,
         'content': 1,
@@ -1604,13 +1476,19 @@ router.get('/recommend/helps', async (ctx, next) => {
       { "$limit": limit }
     ]
   )
+
+  // 没有内容时查询是否有有缘人
+  let friendTotal = 1
+  if (!helps || !helps.length) {
+    friendTotal = await Friend.getFriendTotal()
+  }
   
   ctx.body = {
     success: true,
     noDataTips: constant.NO_TROUBLE,
+    friendTotal,
     pageInfo,
-    helps,
-    info
+    helps
   }
 })
 
@@ -2806,7 +2684,6 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
   const { user } = ctx.state,
   { id } = ctx.params,
   { content } = ctx.request.body
-  console.log(content)
 
   try {
     let recipient_id = mongoose.Types.ObjectId(id)

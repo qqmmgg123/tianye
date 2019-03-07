@@ -109,7 +109,31 @@ const constant = {
 
   // 默认图片
   DEFAULT_IMAGE: 'https://dns3.cinehello.com/1529484315_store_PD_BbR2cfWN.png',
-  SUMMARY_LIMIT: 150
+  SUMMARY_LIMIT: 150,
+
+  // 数据查询
+  FRIENDSHIP_QUERY: [{ $lookup: {
+    from: Friend.collection.name,
+    let: { 'creator_id': '$creator_id' },
+    pipeline: [{ 
+      $match: { 
+        recipient: user._id,
+        $expr: { $eq: [ '$requester', '$$creator_id' ] }
+      }
+    }],
+    as: 'requester'
+  }},
+  { $lookup: {
+    from: Friend.collection.name,
+    let: { 'creator_id': '$creator_id' },
+    pipeline: [{ 
+      $match: { 
+        requester: user._id,
+        $expr: { $eq: [ '$recipient", "$$creator_id' ] }
+      }
+    }],
+    as: 'recipient'
+  }}]
 }
 
 // 输出模块
