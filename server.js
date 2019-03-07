@@ -1109,6 +1109,7 @@ router.get('/diary/:id', async (ctx, next) => {
 // 谈心
 router.get('/features/help', async (ctx, next) => {
   let { user } = ctx.state
+  let friendshipQuery = Friend.friendshipQuery(user._id)
 
   // 分页
   let { query } = ctx.request
@@ -1118,7 +1119,7 @@ router.get('/features/help', async (ctx, next) => {
 
   // 我的烦恼总数
   let totalQueryResult = await Mind.aggregate([
-    ...friendQuery,
+    ...friendshipQuery,
     { $unwind: '$recipient'},
     { $unwind: '$requester'},
     friendMatch,
@@ -1135,7 +1136,7 @@ router.get('/features/help', async (ctx, next) => {
 
   let helps = await Mind.aggregate(
     [
-      ...Friend.friendshipQuery(user._id),
+      ...friendshipQuery,
       { '$lookup': {
         'from': User.collection.name,
         'localField': 'creator_id',
@@ -1428,6 +1429,7 @@ router.get('/help/:id', async (ctx, next) => {
 // 获得推荐时的忧扰
 router.get('/recommend/helps', async (ctx, next) => {
   let { user } = ctx.state
+  let friendshipQuery = Friend.friendshipQuery(user._id)
 
   // 分页
   let { query } = ctx.request
@@ -1437,7 +1439,7 @@ router.get('/recommend/helps', async (ctx, next) => {
 
   // 我的烦恼总数
   let totalQueryResult = await Mind.aggregate([
-    ...friendQuery,
+    ...friendshipQuery,
     { $unwind: '$recipient'},
     { $unwind: '$requester'},
     friendMatch,
@@ -1452,7 +1454,7 @@ router.get('/recommend/helps', async (ctx, next) => {
   let pageInfo = { nextPage }
   let helps = await Mind.aggregate(
     [
-      ...Friend.friendshipQuery(user._id),
+      ...friendshipQuery,
       { '$lookup': {
         'from': User.collection.name,
         'localField': 'creator_id',
