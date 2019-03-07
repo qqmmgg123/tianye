@@ -4,7 +4,7 @@ let Friend = require('../schemas/friend')
 // 获取有缘人关系
 Friend.statics.friendshipQuery = (uid) => {
   return [{ $lookup: {
-    from: Friend.collection.name,
+    from: this.collection.name,
     let: { 'creator_id': '$creator_id' },
     pipeline: [{ 
       $match: { 
@@ -15,7 +15,7 @@ Friend.statics.friendshipQuery = (uid) => {
     as: 'requester'
   }},
   { $lookup: {
-    from: Friend.collection.name,
+    from: this.collection.name,
     let: { 'creator_id': '$creator_id' },
     pipeline: [{ 
       $match: { 
@@ -60,10 +60,10 @@ Friend.statics.friendshipMatch = () => {
 
 // 获取有缘人数目
 Friend.statics.getFriendTotal = async (uid) => {
-  let friends = await Friend.aggregate(
+  let friends = await this.aggregate(
     [
       { $lookup: {
-        from: Friend.collection.name,
+        from: this.collection.name,
         let: { 'recipient': '$recipient' },
         pipeline: [
           { $match: { 
