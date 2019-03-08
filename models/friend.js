@@ -2,7 +2,7 @@ let mongoose = require('mongoose')
 let Friend = require('../schemas/friend')
 
 // 获取有缘人关系
-Friend.statics.friendshipQuery = (uid) => {
+Friend.statics.friendshipQuery = function(uid) {
   return [{ $lookup: {
     from: this.collection.name,
     let: { 'creator_id': '$creator_id' },
@@ -20,7 +20,7 @@ Friend.statics.friendshipQuery = (uid) => {
     pipeline: [{ 
       $match: { 
         requester: uid,
-        $expr: { $eq: [ '$recipient", "$$creator_id' ] }
+        $expr: { $eq: [ '$recipient', '$$creator_id' ] }
       }
     }],
     as: 'recipient'
@@ -28,7 +28,7 @@ Friend.statics.friendshipQuery = (uid) => {
 }
 
 // 匹配是否为有缘人关系
-Friend.statics.friendshipMatch = () => {
+Friend.statics.friendshipMatch = function() {
   return { 
     $match: {  
       $expr: {
@@ -59,7 +59,7 @@ Friend.statics.friendshipMatch = () => {
 }
 
 // 获取有缘人数目
-Friend.statics.getFriendTotal = async (uid) => {
+Friend.statics.getFriendTotal = async function(uid) {
   let friends = await this.aggregate(
     [
       { $lookup: {

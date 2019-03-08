@@ -1110,6 +1110,7 @@ router.get('/diary/:id', async (ctx, next) => {
 router.get('/features/help', async (ctx, next) => {
   let { user } = ctx.state
   let friendshipQuery = Friend.friendshipQuery(user._id)
+  let friendshipMatch = Friend.friendshipMatch()
 
   // 分页
   let { query } = ctx.request
@@ -1122,7 +1123,7 @@ router.get('/features/help', async (ctx, next) => {
     ...friendshipQuery,
     { $unwind: '$recipient'},
     { $unwind: '$requester'},
-    friendMatch,
+    friendshipMatch,
     { $count: 'total' }
   ])
   let total = totalQueryResult 
@@ -1252,7 +1253,7 @@ router.get('/features/help', async (ctx, next) => {
       }},
       { $unwind: '$recipient'},
       { $unwind: '$requester'},
-      Friend.friendshipMatch(),
+      friendshipMatch,
       { '$project': {
         '_id': 1,
         'type_id': 1,
@@ -1276,7 +1277,7 @@ router.get('/features/help', async (ctx, next) => {
   // 没有内容时查询是否有有缘人
   let friendTotal = 1
   if (!helps || !helps.length) {
-    friendTotal = await Friend.getFriendTotal()
+    friendTotal = await Friend.getFriendTotal(user._id)
   }
   
   ctx.body = {
@@ -1430,6 +1431,7 @@ router.get('/help/:id', async (ctx, next) => {
 router.get('/recommend/helps', async (ctx, next) => {
   let { user } = ctx.state
   let friendshipQuery = Friend.friendshipQuery(user._id)
+  let friendshipMatch = Friend.friendshipMatch()
 
   // 分页
   let { query } = ctx.request
@@ -1442,7 +1444,7 @@ router.get('/recommend/helps', async (ctx, next) => {
     ...friendshipQuery,
     { $unwind: '$recipient'},
     { $unwind: '$requester'},
-    friendMatch,
+    friendshipMatch,
     { $count: 'total' }
   ])
   let total = totalQueryResult 
@@ -1463,7 +1465,7 @@ router.get('/recommend/helps', async (ctx, next) => {
       }},
       { $unwind: '$recipient'},
       { $unwind: '$requester'},
-      Friend.friendshipMatch(),
+      friendshipMatch,
       { '$project': {
         '_id': 1,
         'content': 1,
@@ -1482,7 +1484,7 @@ router.get('/recommend/helps', async (ctx, next) => {
   // 没有内容时查询是否有有缘人
   let friendTotal = 1
   if (!helps || !helps.length) {
-    friendTotal = await Friend.getFriendTotal()
+    //friendTotal = await Friend.getFriendTotal(user._id)
   }
   
   ctx.body = {
