@@ -188,12 +188,15 @@ router.use([
 router.all('*', statusErr)
 
 // 首页
-router.get('/', async (ctx, next) => {
-  if (ctx.isAuthenticated()) {
-    ctx.redirect('/features/diary')
-  } else {
-    ctx.redirect('/features/share')
-  }
+router.get('/', (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: constant.APP_NAME,
+  })
+
+  return ctx.render('index', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN
+  })
 })
 
 // 登录页
@@ -533,13 +536,45 @@ router.get([
 // 返回小红点数据
 router.get('/notification', async (ctx, next) => {
   const { user } = ctx.state
-  const notification = await Message.find({
+  /* const notification = await Message.find({
     recipient: user._id
   }).lean()
 
   ctx.body = {
     success: true,
     notification,
+  } */
+  let mindReplyNew = await Mind.aggregate([
+    { $match: {
+      creator_id: user._id
+    }},
+    { $lookup: {
+      from: Reply.collection.name,
+      let: { 'mind_id': '$_id' },
+      pipeline: [
+        { $match: { 
+          $expr: { $eq: [ '$reply_id', '$$mind_id' ] }
+        }},
+        { $sort: { created_date: -1 } },
+        { $limit: 1 }
+      ],
+      as: 'reply'
+    }},
+    { $unwind: '$reply' },
+    { $match: { 
+      $expr: { $gt: [ '$reply.created_date', '$reply_visit_date' ] }
+    }},
+    { $count: 'total' }
+  ])
+
+  console.log(mindReplyNew)
+
+  ctx.body = {
+    success: true,
+    notification: mindReplyNew && mindReplyNew.length ? [{
+      feature: 'mind',
+      has_new: true
+    }] : [],
   }
 })
 
@@ -710,65 +745,114 @@ router.get('/features/mind', async (ctx, next) => {
     ].join('——')
   })
 
+  let { user } = ctx.state
+
   // 分页
   let { query } = ctx.request
   let page = +query.page || 1
   let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
+  let condition = {
+    creator_id: user._id
+  }
 
   // 心念总数
-  let total = await Mind.estimatedDocumentCount()
+  let total = await Mind.countDocuments(condition)
   let totalPage = Math.ceil(total / limit)
   const nextPage = page < totalPage ? page + 1 : 0
   const pageInfo = {
     nextPage
   }
 
-  let { user } = ctx.state
-
   // 查找所有记录
-  let minds = await Mind.find({
-    creator_id: user._id
-  })
-    /*.select([
-      '_id', 
-      'type_id', 
-      'column_id', 
-      'title', 
-      'content', 
-      'is_extract', 
-      'summary', 
-      'ref_id',
-      'created_date',
-      'updated_date',
-      'last_reply_date',
-      'last_reply_id',
-      'state_change_date', 
-      'creator_id'].join(' '))*/
-    .populate({
-      path: 'new_reply', 
-      select: 'creator_id content',
-      model: 'Reply',
-      populate: [{
-        path: 'author',
-        select: 'panname username',
-        model: 'User'
-      }, {
-        path: 'friend',
-        select: 'remark',
-        model: 'Friend',
-        match: { requester: user._id }
-      }],
-    })
-    .populate({
-      path: 'quote',
-      select: 'title summary',
-      model: 'Classic'
-    })
-    .sort({ state_change_date: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
+  let minds = await Mind.aggregate([
+    { $match: condition },
+    { $lookup: {
+      from: Reply.collection.name,
+      let: { 'mind_id': '$_id' },
+      pipeline: [
+        { $match: { 
+          $expr: { $eq: [ '$reply_id', '$$mind_id' ] }
+        }},
+        // 查询回复创建者信息
+        User.authorInfoQuery(),
+        { $lookup: {
+          from: Friend.collection.name,
+          let: { 'user_id': '$creator_id' },
+          pipeline: [
+            { $match: { 
+              requester: user._id,
+              $expr: { $eq: [ '$recipient', '$$user_id' ] }
+            }},
+            { $project: {
+              remark: 1
+            }},
+          ],
+          as: 'friend'
+        }},
+        { $project: {
+          creator_id: 1,
+          content: 1,
+          created_date: 1,
+          author: { $cond : [ { $eq : ['$author', []]}, [ null ], '$author'] },
+          friend: { $cond : [ { $eq : ['$friend', []]}, [ null ], '$friend'] }
+        }},
+        { $unwind: '$author' },
+        { $unwind: '$friend' },
+        { $project: {
+          creator_id: 1,
+          content: 1,
+          created_date: 1,
+          author: 1,
+          friend: 1
+        }},
+        { $sort: { created_date: -1 } },
+        { $limit: 1 }
+      ],
+      as: 'new_reply'
+    }},
+    // 获取引用
+    Classic.quoteQuery(),
+    { $project: {
+      _id: 1, 
+      type_id: 1, 
+      column_id: 1, 
+      title: 1, 
+      is_extract: 1, 
+      summary: 1, 
+      creator_id: 1,
+      created_date: 1,
+      updated_date: 1,
+      reply_visit_date: 1,
+      quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+      new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
+      state_change_date: 1
+    }},
+    { $unwind: '$new_reply' },
+    { $unwind: '$quote' },
+    { $project: {
+      _id: 1, 
+      type_id: 1, 
+      column_id: 1, 
+      title: 1, 
+      is_extract: 1, 
+      summary: 1, 
+      creator_id: 1,
+      created_date: 1,
+      updated_date: 1,
+      has_new: 1,
+      quote: 1,
+      new_reply: 1,
+      reply_visit_date: 1,
+      last_reply_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', null] },
+      state_change_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', '$state_change_date'] },
+    }},
+    { $sort: { state_change_date: -1 } },
+    { $skip: skip },
+    { $limit: limit }
+  ])
+
+  console.log(minds)
 
   // 返回并渲染首页
   ctx.body = {
@@ -1072,45 +1156,14 @@ router.get('/diary/:id', async (ctx, next) => {
   ctx.session.info = null
 })
 
-// 心语编辑页
-/* router.get('/diary/:id/modify', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  // 查找所有烦恼
-  let share = await Diary.findById(
-    ctx.params.id)
-    .select('_id title content')
-    .lean()
-
-  // 返回并渲染首页
-  await ctx.fullRender('diarymodify', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    shareHolder: constant.SHARE_HOLDER,
-    shareColumnHolder: constant.SHARE_COLUMN_HOLDER,
-    features: constant.FEATURES,
-    columns: constant.COLUMNS,
-    diary,
-    backPage: '/features/diary',
-    info
-  })
-
-  ctx.session.info = null
-})*/
-
 // 谈心
 router.get('/features/help', async (ctx, next) => {
   let { user } = ctx.state
+
+  // 有缘人关系
   let friendshipQuery = Friend.friendshipQuery(user._id)
   let friendshipMatch = Friend.friendshipMatch()
+  let authorInfoQuery = User.authorInfoQuery()
 
   // 分页
   let { query } = ctx.request
@@ -1118,7 +1171,7 @@ router.get('/features/help', async (ctx, next) => {
   let limit = +query.limit || constant.LIST_LIMIT
   let skip = (page - 1) * limit
 
-  // 我的烦恼总数
+  // 我的心事数目
   let totalQueryResult = await Mind.aggregate([
     ...friendshipQuery,
     { $unwind: '$recipient'},
@@ -1135,144 +1188,87 @@ router.get('/features/help', async (ctx, next) => {
     nextPage: page < totalPage ? page + 1 : 0
   }
 
-  let helps = await Mind.aggregate(
-    [
-      ...friendshipQuery,
-      { '$lookup': {
-        'from': User.collection.name,
-        'localField': 'creator_id',
-        'foreignField': '_id',
-        'as': 'user'
-      }},
-      { '$lookup': {
-        'from': Reply.collection.name,
-        'let': { 'trouble_id': '$_id' },
-        'pipeline': [
-          { '$lookup': {
-            'from': Friend.collection.name,
-            'let': { 'creator_id': '$creator_id' },
-            'pipeline': [{ 
-              '$match': { 
-                'recipient': user._id,
-                "$expr": { "$eq": [ "$requester", "$$creator_id" ] }
-              }
-            }],
-            'as': 'requester'
-          }},
-          { '$lookup': {
-            'from': Friend.collection.name,
-            'let': { 'creator_id': '$creator_id' },
-            'pipeline': [{ 
-              '$match': { 
-                'requester': user._id,
-                "$expr": { "$eq": [ "$recipient", "$$creator_id" ] }
-              }
-            }],
-            'as': 'recipient'
-          }},
-          { '$lookup': {
-            'from': User.collection.name,
-            'localField': 'creator_id',
-            'foreignField': '_id',
-            'as': 'user'
-          }},
-          { '$lookup': {
-            'from': User.collection.name,
-            'localField': 'receiver_id',
-            'foreignField': '_id',
-            'as': 'receiver'
-          }},
-          { '$lookup': {
-            'from': Friend.collection.name,
-            'let': { 'receiver_id': '$receiver_id' },
-            'pipeline': [{ 
-              '$match': { 
-                'requester': user._id,
-                "$expr": { "$eq": [ "$recipient", "$$receiver_id" ] }
-              }
-            }],
-            'as': 'rreceiver'
-          }},
-          { '$lookup': {
-            'from': Classic.collection.name,
-            'localField': 'ref_id',
-            'foreignField': '_id',
-            'as': 'classic'
-          }},
-          { 
-            '$match': { 
-              '$expr': { 
-                '$and': [
-                  { 
-                    "$eq": [ 
-                      "$parent_id", 
-                      "$$trouble_id" 
-                    ]
-                  }, { 
-                    '$or': [
-                      { 
-                        '$and': [
-                          { 
-                            '$eq': [{ '$min': '$recipient.status' }, 3]
-                          }, { 
-                            '$eq': [{ '$min':'$requester.status' }, 3] 
-                          }
-                        ]
-                      }, { 
-                        '$eq': ['$creator_id', user._id]
-                      }
-                    ]
-                  },
-                ]
-              }
+  // 查找有缘人的心事
+  let helps = await Mind.aggregate([
+    ...friendshipQuery,
+    // 查询心念创建者信息
+    authorInfoQuery,
+    // 查询回复列表
+    { $lookup: {
+      from: Reply.collection.name,
+      let: { 'mind_id': '$_id' },
+      pipeline: [
+        ...friendshipQuery,
+        // 查询回复创建者信息
+        authorInfoQuery,
+        { $lookup: {
+          from: User.collection.name,
+          localField: 'receiver_id',
+          foreignField: '_id',
+          as: 'receiver'
+        }},
+        { $lookup: {
+          from: Friend.collection.name,
+          let: { 'receiver_id': '$receiver_id' },
+          pipeline: [{ 
+            $match: { 
+              requester: user._id,
+              $expr: { $eq: [ '$recipient', '$$receiver_id' ] }
             }
-          },
-          { '$group': { '_id': '$parent_id', 'data':{ '$push':{ 'rs': '$$ROOT', 'us': '$user', 'rus': '$receiver', 'rec': '$recipient', 'rrec': '$rreceiver', 'ref': '$classic' } }, 'count': { '$sum': 1 } } },
-          { '$unwind': '$data' },
-          {
-            '$project': {
-              '_id': '$data.rs._id',
-              'content': "$data.rs.content",
-              'reply_type': "$data.rs.reply_type",
-              'creator_id': "$data.rs.creator_id",
-              'created_date': "$data.rs.created_date",
-              'username': '$data.us.username',
-              'remark': '$data.rec.remark',
-              'receivername': '$data.rus.username',
-              'rremark': '$data.rrec.remark',
-              'ref_id': '$data.ref._id',
-              'ref_title': '$data.ref.title',
-              'ref_summary': '$data.ref.summary',
-              'count': 1
-            }
-          },
-          { '$sort': { 'created_date': -1 } },
-          { "$limit": 5 }
-        ],
-        'as': 'replies'
-      }},
-      { $unwind: '$recipient'},
-      { $unwind: '$requester'},
-      friendshipMatch,
-      { '$project': {
-        '_id': 1,
-        'type_id': 1,
-        'column_id': 1,
-        'summary': 1,
-        'is_extract': 1,
-        'replies': '$replies',
-        'creator_id': 1,
-        'last_reply_date': 1,
-        'created_date': 1,
-        'username': '$user.username',
-        'remark': '$recipient.remark',
-        'reply_count': { '$max': '$replies.count'}
-      }},
-      { '$sort': { 'last_reply_date': -1, 'created_date': -1 } },
-      { '$skip' : skip },
-      { "$limit": limit }
-    ]
-  )
+          }],
+          as: 'rreceiver'
+        }},
+        // 获取引用
+        Classic.quoteQuery(),
+        // 心事回复匹配是否为有缘人关系
+        Friend.replyfriendshipMatch(user._id),
+        { $group: { '_id': '$parent_id', 'data':{ '$push':{ 'rs': '$$ROOT', 'us': '$author', 'rus': '$receiver', 'rec': '$recipient', 'rrec': '$rreceiver', 'ref': '$quote' } }, 'count': { '$sum': 1 } } },
+        { $unwind: '$data' },
+        {
+          $project: {
+            _id: '$data.rs._id',
+            content: "$data.rs.content",
+            reply_type: "$data.rs.reply_type",
+            creator_id: "$data.rs.creator_id",
+            created_date: "$data.rs.created_date",
+            username: '$data.us.username',
+            remark: '$data.rec.remark',
+            receivername: '$data.rus.username',
+            rremark: '$data.rrec.remark',
+            ref_id: '$data.ref._id',
+            ref_title: '$data.ref.title',
+            ref_summary: '$data.ref.summary',
+            count: 1
+          }
+        },
+        { $sort: { 'created_date': -1 } },
+        { $limit: 5 }
+      ],
+      as: 'replies'
+    }},
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
+    friendshipMatch,
+    { $project: {
+      _id: 1,
+      type_id: 1,
+      column_id: 1,
+      summary: 1,
+      is_extract: 1,
+      replies: '$replies',
+      creator_id: 1,
+      last_reply_date: 1,
+      created_date: 1,
+      username: '$author.username',
+      remark: '$recipient.remark',
+      reply_count: { '$max': '$replies.count'}
+    }},
+    { $sort: { 'last_reply_date': -1, 'created_date': -1 } },
+    { $skip: skip },
+    { $limit: limit }
+  ])
+
+  console.log(helps)
 
   // 没有内容时查询是否有有缘人
   let friendTotal = 1
@@ -1394,6 +1390,7 @@ router.get('/help/:id', async (ctx, next) => {
       { '$match': { '_id': troubleId }},
       { '$project': {
         '_id': 1,
+        'type_id': 1,
         'content': 1,
         'replies': '$replies',
         'creator_id': 1,
@@ -2429,16 +2426,28 @@ router.post('/:type/:id/reply', async (ctx, next) => {
     )
 
     // 发送回复通知
-    await Message.updateOne({ 
+    /* const feature = type === 'mind'
+    ? 'mind' 
+    : (
+        type === 'reply' 
+          ? 'karma' 
+          : 'unknow'
+      )
+
+    await Message.updateOne({
       recipient: receiver_id,
-      feature: 'mind',
+      feature,
+      sub_feature: 'talk',
     }, 
     { $set: { 
-      has_new: false
+      recipient: receiver_id,
+      feature,
+      sub_feature: 'talk',
+      has_new: true
     }},     
     {
       upsert: true
-    })
+    }) */
 
     ctx.body = {
       success: true,

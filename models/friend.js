@@ -27,7 +27,7 @@ Friend.statics.friendshipQuery = function(uid) {
   }}]
 }
 
-// 匹配是否为有缘人关系
+// 心事匹配是否为有缘人关系
 Friend.statics.friendshipMatch = function() {
   return { 
     $match: {  
@@ -52,6 +52,38 @@ Friend.statics.friendshipMatch = function() {
               }
             ]
           }
+        ]
+      }
+    }
+  }
+}
+
+// 心事回复匹配是否为有缘人关系
+Friend.statics.replyfriendshipMatch = function(uid) {
+  return { 
+    $match: { 
+      $expr: { 
+        $and: [
+          { 
+            $eq: [ 
+              '$parent_id', 
+              '$$mind_id' 
+            ]
+          }, { 
+            $or: [
+              { 
+                $and: [
+                  { 
+                    $eq: [{ $min: '$recipient.status' }, 3]
+                  }, { 
+                    $eq: [{ $min:'$requester.status' }, 3] 
+                  }
+                ]
+              }, { 
+                $eq: ['$creator_id', uid]
+              }
+            ]
+          },
         ]
       }
     }

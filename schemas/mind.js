@@ -73,6 +73,10 @@ let mindSchema = new Schema({
   last_reply_date: {
     type: Date
   },
+  reply_visit_date: {
+    type: Date,
+    default: Date.now 
+  },
   state_change_date: {
     type: Date, 
     default: Date.now

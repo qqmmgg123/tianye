@@ -61,7 +61,7 @@ const constant = {
   FEATURES: {
     MIND: '心',
     KARMA: '缘',
-    CLASSIC: '知',// '著作经典',
+    EARTH: '尘',
   },
 
   // 心念类型
