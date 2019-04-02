@@ -15,8 +15,8 @@ const User = require('./models/user')
 const Verification = require('./models/verification')
 const Message = require('./models/message')
 const Mind = require('./models/mind')
-const Diary = require('./models/diary')
-const Trouble = require('./models/trouble')
+const FeatureVisitor = require('./models/feature_visitor')
+const Visitor = require('./models/visitor')
 const Share = require('./models/share')
 const Classic = require('./models/classic')
 const Section = require('./models/section')
@@ -134,8 +134,9 @@ app.use(passport.session())
 router.get([
   '/notification',
   '/features/mind',
-  '/features/found',
+  '/features/help',
   '/friend',
+  '/features/diary',
   '/user/search',
   '/help/:id',
   '/recommend/helps',
@@ -221,63 +222,67 @@ router.get('/login', async (ctx) => {
   ctx.session.info = null
 })
 
-// 登录
-router.post('/login', (ctx) => {
-  return passport.authenticate('local', (err, user, info, status) => {
-    if (err) {
-      if (ctx.state.isXhr) {
-        ctx.body = {
+function loginPromise(ctx) {
+  return new Promise((resove, reject) => {
+    passport.authenticate('local', (err, user, info, status) => {
+      if (err) {
+        resove({
           success: false,
           info: err.message
-        }
+        })
       } else {
-        ctx.session.info = err.message
-        ctx.redirect('/login')
-      }
-    } else {
-      if (!user) {
-        const info = constant.USER_NOT_EXISTS
-        if (ctx.state.isXhr) {
-          ctx.body = {
+        if (!user) {
+          const info = constant.USER_NOT_EXISTS
+          resove({
             success: false,
-            info,
-          }
+            info
+          })
         } else {
-          ctx.session.info = info
-          ctx.redirect('/login')
-        }
-      } else {
-        ctx.login(user, (err) => {
-          if (err) {
-            if (ctx.state.isXhr) {
-              ctx.body = {
+          ctx.login(user, (err) => {
+            if (err) {
+              resove({
                 success: false,
-                info: err.message,
-              }
+                info: err.message
+              })
             } else {
-              ctx.session.info = err.message
-              ctx.redirect('/login')
-            }
-          } else {
-            if (ctx.state.isXhr) {
-              ctx.body = {
+              resove({
                 success: true,
                 user
-              }
-            } else {
-              const { currentUrl } = ctx.session
-              if (currentUrl) {
-                ctx.redirect(currentUrl)
-                ctx.session.currentUrl = null
-              } else {
-                ctx.redirect('/')
-              }
+              })
             }
-          }
-        })
+          })
+        }
+      }
+    })(ctx)
+  })  
+}
+
+// 登录
+router.post('/login', async (ctx) => {
+  let loginRes = await loginPromise(ctx)
+  let { success, info, user } = loginRes
+  if (success) {
+    if (ctx.state.isXhr) {
+      let notification = await getNotification(user._id)
+      loginRes.notification = notification
+      ctx.body = loginRes
+    } else {
+      const { currentUrl } = ctx.session
+      if (currentUrl) {
+        ctx.redirect(currentUrl)
+        ctx.session.currentUrl = null
+      } else {
+        ctx.redirect('/')
       }
     }
-  })(ctx)
+  } else {
+    if (ctx.state.isXhr) {
+      ctx.body = loginRes
+    } else {
+      ctx.session.info = info
+      ctx.redirect('/login')
+    }
+  }
 })
 
 router.get('/logout', function(ctx) {
@@ -533,48 +538,134 @@ router.get([
   return next()
 })
 
-// 返回小红点数据
-router.get('/notification', async (ctx, next) => {
-  const { user } = ctx.state
-  /* const notification = await Message.find({
-    recipient: user._id
-  }).lean()
-
-  ctx.body = {
-    success: true,
-    notification,
-  } */
+async function getNotification(uid) {
+  // 查找“心”消息提示
   let mindReplyNew = await Mind.aggregate([
     { $match: {
-      creator_id: user._id
+      creator_id: uid
     }},
+    Visitor.queryVisitor(uid),
     { $lookup: {
       from: Reply.collection.name,
       let: { 'mind_id': '$_id' },
       pipeline: [
-        { $match: { 
-          $expr: { $eq: [ '$reply_id', '$$mind_id' ] }
+        Friend.lastReplyMatch(uid),
+        { $project: {
+          created_date: 1
         }},
         { $sort: { created_date: -1 } },
         { $limit: 1 }
       ],
       as: 'reply'
     }},
+    { $project: {
+      reply: 1,
+      visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
+      created_date: 1
+    }},
+    { $unwind: '$visitor' },
     { $unwind: '$reply' },
+    { $project: {
+      reply: 1,
+      visited_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
+    }},
     { $match: { 
-      $expr: { $gt: [ '$reply.created_date', '$reply_visit_date' ] }
+      $expr: { $gt: [ '$reply.created_date',  '$visited_date' ] }
     }},
     { $count: 'total' }
   ])
 
-  console.log(mindReplyNew)
+  // 查找“缘”消息提示
+  let karmaTalkVisit = await FeatureVisitor.findOne({
+    visitor_id: uid,
+    feature: 'talk'
+  }, 'visited_date')
+
+  let friendshipMatch = await Friend.friendshipMatch()
+  friendshipMatch.$match.$expr.$and.push({
+    $gt: [ '$created_date',  karmaTalkVisit ? karmaTalkVisit.visited_date : null ]
+  })
+  let karmaTalkNew = await Mind.aggregate([
+    ...Friend.friendshipQuery(uid),
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
+    friendshipMatch,
+    { $count: 'total' }
+  ])
+
+  // 查找“缘谈心”消息提示
+  let talkReplyNew = await Mind.aggregate([
+    ...Friend.friendshipQuery(uid),
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
+    Friend.friendshipMatch(),
+    Visitor.queryVisitor(uid),
+    { $lookup: {
+      from: Reply.collection.name,
+      let: { 'mind_id': '$_id' },
+      pipeline: [
+        ...Friend.friendshipQuery(uid),
+        Friend.newReplyfriendshipMatch(uid),
+        { $sort: { created_date: -1 } },
+        { $limit: 1 }
+      ],
+      as: 'reply'
+    }},
+    { $project: {
+      reply: 1,
+      visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
+      created_date: 1
+    }},
+    { $unwind: '$visitor' },
+    { $unwind: '$reply' },
+    { $project: {
+      reply: 1,
+      visited_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
+    }},
+    { $match: { 
+      $expr: {
+        $gt: [ '$reply.created_date',  '$visited_date' ] 
+      }
+    }},
+    { $count: 'total' }
+  ])
+
+  let notification = []
+  let mindReplyCount = mindReplyNew && mindReplyNew[0] && mindReplyNew[0].total || 0
+  mindReplyCount && notification.push({
+    feature: 'mind',
+    has_new: true,
+    toatl: mindReplyCount
+  })
+
+  let talkReplyCount = talkReplyNew && talkReplyNew[0] && talkReplyNew[0].total || 0
+  let karmaTalkCount = karmaTalkNew && karmaTalkNew[0] && karmaTalkNew[0].total || 0
+  if (talkReplyCount || karmaTalkCount) {
+      notification.push({
+      feature: 'karma',
+      has_new: true,
+      sub_feature: [{
+        feature: 'talk',
+        reply_total: talkReplyCount,
+        mind_total: karmaTalkCount,
+        has_new: true
+      }], 
+    })
+  }
+
+  return notification
+}
+
+// 返回小红点数据
+router.get('/notification', async (ctx, next) => {
+  const { user } = ctx.state
+  const uid = user._id
+
+  let notification = await getNotification(uid)
 
   ctx.body = {
     success: true,
-    notification: mindReplyNew && mindReplyNew.length ? [{
-      feature: 'mind',
-      has_new: true
-    }] : [],
+    notification
   }
 })
 
@@ -583,48 +674,36 @@ router.get('/friend', async (ctx, next) => {
   let { user } = ctx.state
   let friends = await Friend.aggregate(
     [
-     { '$lookup': {
-        'from': Friend.collection.name,
-        'let': { 'recipient': '$recipient' },
-        'pipeline': [
-          { '$match': { 
-            'recipient': user._id, 
-            "$expr": { "$eq": [ "$requester", "$$recipient" ] }
+     { $lookup: {
+        from: Friend.collection.name,
+        let: { 'recipient': '$recipient' },
+        pipeline: [
+          { $match: { 
+            recipient: user._id, 
+            $expr: { $eq: [ '$requester', '$$recipient' ] }
           }},
         ],
-        'as': 'friend'
+        as: 'friend'
       }},
-      { '$lookup': {
-        'from': User.collection.name,
-        'localField': 'recipient',
-        'foreignField': '_id',
-        'as': 'user'
+      { $lookup: {
+        from: User.collection.name,
+        localField: 'recipient',
+        foreignField: '_id',
+        as: 'user'
       }},
-      { '$match': { 'requester': user._id } },
-      { '$project': {
-        'status': 1,
-        'content': 1,
-        'remark': 1,
-        'shareHelp': 1,
-        'shareShare': 1,
-        'recipient_status': { '$ifNull': [ { "$min": "$friend.status" }, 0 ] },
-        'recipient_id': '$user._id',
-        'recipient_name': '$user.username',
+      { $match: { 'requester': user._id } },
+      { $project: {
+        status: 1,
+        content: 1,
+        remark: 1,
+        shareHelp: 1,
+        shareShare: 1,
+        recipient_status: { '$ifNull': [ { "$min": "$friend.status" }, 0 ] },
+        recipient_id: '$user._id',
+        recipient_name: '$user.panname',
       }}
     ]
   )
-
-  await Message.updateOne({ 
-    recipient: user._id,
-    feature: 'karma',
-    sub_feature: 'friend',
-  }, 
-  { $set: { 
-    has_new: false
-  }},     
-  {
-    upsert: true
-  })
 
   // 返回数据
   ctx.body = {
@@ -738,14 +817,9 @@ router.get('/user/search', async (ctx, next) => {
 
 // 心
 router.get('/features/mind', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
   let { user } = ctx.state
+
+  let quoteQuery = Classic.quoteQuery()
 
   // 分页
   let { query } = ctx.request
@@ -759,37 +833,26 @@ router.get('/features/mind', async (ctx, next) => {
   // 心念总数
   let total = await Mind.countDocuments(condition)
   let totalPage = Math.ceil(total / limit)
-  const nextPage = page < totalPage ? page + 1 : 0
-  const pageInfo = {
-    nextPage
+  let pageInfo = {
+    nextPage: page < totalPage ? page + 1 : 0
   }
 
   // 查找所有记录
   let minds = await Mind.aggregate([
     { $match: condition },
+    Visitor.queryVisitor(user._id),
     { $lookup: {
       from: Reply.collection.name,
       let: { 'mind_id': '$_id' },
       pipeline: [
         { $match: { 
-          $expr: { $eq: [ '$reply_id', '$$mind_id' ] }
+          $expr: { $eq: [ '$parent_id', '$$mind_id' ] }
         }},
         // 查询回复创建者信息
         User.authorInfoQuery(),
-        { $lookup: {
-          from: Friend.collection.name,
-          let: { 'user_id': '$creator_id' },
-          pipeline: [
-            { $match: { 
-              requester: user._id,
-              $expr: { $eq: [ '$recipient', '$$user_id' ] }
-            }},
-            { $project: {
-              remark: 1
-            }},
-          ],
-          as: 'friend'
-        }},
+        Friend.requesterQuery(user._id),
+        // 获取引用
+        quoteQuery,
         { $project: {
           creator_id: 1,
           content: 1,
@@ -812,7 +875,7 @@ router.get('/features/mind', async (ctx, next) => {
       as: 'new_reply'
     }},
     // 获取引用
-    Classic.quoteQuery(),
+    quoteQuery,
     { $project: {
       _id: 1, 
       type_id: 1, 
@@ -823,11 +886,12 @@ router.get('/features/mind', async (ctx, next) => {
       creator_id: 1,
       created_date: 1,
       updated_date: 1,
-      reply_visit_date: 1,
+      visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
       quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
       new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
       state_change_date: 1
     }},
+    { $unwind: '$visitor' },
     { $unwind: '$new_reply' },
     { $unwind: '$quote' },
     { $project: {
@@ -843,16 +907,14 @@ router.get('/features/mind', async (ctx, next) => {
       has_new: 1,
       quote: 1,
       new_reply: 1,
-      reply_visit_date: 1,
-      last_reply_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', null] },
+      reply_visit_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
+      last_reply_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', '$created_date'] },
       state_change_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', '$state_change_date'] },
     }},
     { $sort: { state_change_date: -1 } },
     { $skip: skip },
     { $limit: limit }
   ])
-
-  console.log(minds)
 
   // 返回并渲染首页
   ctx.body = {
@@ -866,10 +928,8 @@ router.get('/features/mind', async (ctx, next) => {
   }
 })
 
-// 随缘
-router.get('/features/found', async (ctx, next) => {
-  const { user } = ctx.state
-
+// 尘
+router.get('/features/earth', async (ctx, next) => {
   // 分页
   let { query } = ctx.request
   let page = +query.page || 1
@@ -884,11 +944,18 @@ router.get('/features/found', async (ctx, next) => {
     nextPage
   }
 
-  // 查找所有记录
-  let minds = await Mind.find({
+  const { user } = ctx.state
+  , condition = {
     type_id: { $in: ['help', 'share'] },
-    creator_id: { $ne: user._id }
-  })
+  }
+
+  const uid = user && user._id
+  if (uid) {
+    condition.creator_id = { $ne: uid }
+  }
+
+  // 查找所有记录
+  let minds = await Mind.find(condition)
   .select([
     '_id', 
     'type_id', 
@@ -904,21 +971,29 @@ router.get('/features/found', async (ctx, next) => {
   .limit(limit)
   .lean()
 
-  // 受益状态
-  let mindIds = minds.map(mind => mind._id)
-  let thanks = await Thank.find({
-    basis_id: { $in: mindIds },
-    giver_id: user.id
-  }).lean()
-  minds = minds.map(mind => {
-    mind.isThanked = thanks.findIndex(
-      thank => thank.basis_id.equals(mind._id)) > -1
-    return mind
-  })
+  if (uid) {
+    // 受益状态
+    let mindIds = minds.map(mind => mind._id)
+    const thankQueryCondition = {
+      basis_id: { $in: mindIds }
+    }
+    thankQueryCondition.winner_id = { $ne: uid }
+    let thanks = await Thank.find(thankQueryCondition).lean()
+    minds = minds.map(mind => {
+      mind.isThanked = thanks.findIndex(
+        thank => thank.basis_id.equals(mind._id)) > -1
+      return mind
+    })
+  }
+
+  ctx.set('cookie', ctx.request.header.cookies)
 
   // 返回并渲染首页
   ctx.body = {
     success: true,
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
     pageInfo,
     minds,
   }
@@ -1126,36 +1201,6 @@ router.get('/features/diary', async (ctx, next) => {
   }
 })
 
-// 分享内容页
-router.get('/diary/:id', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  let diaryId = ctx.params.id
-  let diary = await Diary.findById(
-    diaryId)
-    .select('_id content')
-    .lean()
-
-  // 返回并渲染首页
-  await ctx.fullRender('share', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    diary,
-    backPage: '/features/diary',
-    info
-  })
-
-  ctx.session.info = null
-})
-
 // 谈心
 router.get('/features/help', async (ctx, next) => {
   let { user } = ctx.state
@@ -1163,7 +1208,9 @@ router.get('/features/help', async (ctx, next) => {
   // 有缘人关系
   let friendshipQuery = Friend.friendshipQuery(user._id)
   let friendshipMatch = Friend.friendshipMatch()
+  let requesterQuery = Friend.requesterQuery(user._id)
   let authorInfoQuery = User.authorInfoQuery()
+  let quoteQuery = Classic.quoteQuery()
 
   // 分页
   let { query } = ctx.request
@@ -1171,7 +1218,7 @@ router.get('/features/help', async (ctx, next) => {
   let limit = +query.limit || constant.LIST_LIMIT
   let skip = (page - 1) * limit
 
-  // 我的心事数目
+  // 有缘人心事数目
   let totalQueryResult = await Mind.aggregate([
     ...friendshipQuery,
     { $unwind: '$recipient'},
@@ -1191,91 +1238,137 @@ router.get('/features/help', async (ctx, next) => {
   // 查找有缘人的心事
   let helps = await Mind.aggregate([
     ...friendshipQuery,
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
+    friendshipMatch,
+    Visitor.queryVisitor(user._id),
     // 查询心念创建者信息
     authorInfoQuery,
-    // 查询回复列表
+    requesterQuery,
+    // 查找最新回复
     { $lookup: {
       from: Reply.collection.name,
       let: { 'mind_id': '$_id' },
       pipeline: [
         ...friendshipQuery,
+        Friend.lastReplyfriendshipMatch(user._id),
+        { $project: {
+          created_date: 1
+        }},
+        { $sort: { created_date: -1 } },
+        { $limit: 1 }
+      ],
+      as: 'last_reply'
+    }},
+    // 查询我回复
+    { $lookup: {
+      from: Reply.collection.name,
+      let: { 'mind_id': '$_id' },
+      pipeline: [
+        // 心事回复匹配是否为有缘人关系
+        ...friendshipQuery,
+        Friend.newReplyfriendshipMatch(user._id),
         // 查询回复创建者信息
         authorInfoQuery,
-        { $lookup: {
-          from: User.collection.name,
-          localField: 'receiver_id',
-          foreignField: '_id',
-          as: 'receiver'
-        }},
-        { $lookup: {
-          from: Friend.collection.name,
-          let: { 'receiver_id': '$receiver_id' },
-          pipeline: [{ 
-            $match: { 
-              requester: user._id,
-              $expr: { $eq: [ '$recipient', '$$receiver_id' ] }
-            }
-          }],
-          as: 'rreceiver'
-        }},
+        requesterQuery,
         // 获取引用
-        Classic.quoteQuery(),
-        // 心事回复匹配是否为有缘人关系
-        Friend.replyfriendshipMatch(user._id),
-        { $group: { '_id': '$parent_id', 'data':{ '$push':{ 'rs': '$$ROOT', 'us': '$author', 'rus': '$receiver', 'rec': '$recipient', 'rrec': '$rreceiver', 'ref': '$quote' } }, 'count': { '$sum': 1 } } },
-        { $unwind: '$data' },
-        {
-          $project: {
-            _id: '$data.rs._id',
-            content: "$data.rs.content",
-            reply_type: "$data.rs.reply_type",
-            creator_id: "$data.rs.creator_id",
-            created_date: "$data.rs.created_date",
-            username: '$data.us.username',
-            remark: '$data.rec.remark',
-            receivername: '$data.rus.username',
-            rremark: '$data.rrec.remark',
-            ref_id: '$data.ref._id',
-            ref_title: '$data.ref.title',
-            ref_summary: '$data.ref.summary',
-            count: 1
-          }
-        },
-        { $sort: { 'created_date': -1 } },
-        { $limit: 5 }
+        quoteQuery,
+        { $project: {
+          creator_id: 1,
+          content: 1,
+          created_date: 1,
+          author: { $cond : [ { $eq : ['$author', []]}, [ null ], '$author'] },
+          friend: { $cond : [ { $eq : ['$friend', []]}, [ null ], '$friend'] }
+        }},
+        { $unwind: '$author' },
+        { $unwind: '$friend' },
+        { $project: {
+          creator_id: 1,
+          content: 1,
+          created_date: 1,
+          author: 1,
+          friend: 1
+        }},
+        { $sort: { created_date: -1 } },
+        { $limit: 1 }
       ],
-      as: 'replies'
+      as: 'new_reply'
     }},
-    { $unwind: '$recipient'},
-    { $unwind: '$requester'},
-    friendshipMatch,
+    // 获取引用
+    quoteQuery,
     { $project: {
-      _id: 1,
-      type_id: 1,
-      column_id: 1,
-      summary: 1,
-      is_extract: 1,
-      replies: '$replies',
+      _id: 1, 
+      type_id: 1, 
+      column_id: 1, 
+      title: 1, 
+      author: { $cond : [ { $eq : ['$author', []]}, [ null ], '$author'] },
+      friend: { $cond : [ { $eq : ['$friend', []]}, [ null ], '$friend'] },
+      is_extract: 1, 
+      summary: 1, 
       creator_id: 1,
-      last_reply_date: 1,
       created_date: 1,
-      username: '$author.username',
-      remark: '$recipient.remark',
-      reply_count: { '$max': '$replies.count'}
+      updated_date: 1,
+      visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
+      quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+      new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
+      last_reply: { $cond : [ { $eq : ['$last_reply', []]}, [ null ], '$last_reply'] },
+      state_change_date: 1
     }},
-    { $sort: { 'last_reply_date': -1, 'created_date': -1 } },
+    { $unwind: '$author' },
+    { $unwind: '$friend' },
+    { $unwind: '$visitor' },
+    { $unwind: '$new_reply' },
+    { $unwind: '$last_reply' },
+    { $unwind: '$quote' },
+    { $project: {
+      _id: 1, 
+      type_id: 1, 
+      column_id: 1, 
+      title: 1, 
+      author: 1,
+      friend: 1,
+      is_extract: 1, 
+      summary: 1, 
+      creator_id: 1,
+      created_date: 1,
+      updated_date: 1,
+      has_new: 1,
+      quote: 1,
+      new_reply: 1,
+      last_reply: 1,
+      reply_visit_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
+      new_reply_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', '$created_date'] },
+      state_change_date: { $cond : [ { $ne : ['$last_reply', null]}, '$last_reply.created_date', '$state_change_date'] },
+    }},
+    { $sort: { state_change_date: -1 } },
     { $skip: skip },
     { $limit: limit }
   ])
-
-  console.log(helps)
 
   // 没有内容时查询是否有有缘人
   let friendTotal = 1
   if (!helps || !helps.length) {
     friendTotal = await Friend.getFriendTotal(user._id)
   }
-  
+
+  console.log(typeof query.isVisit)
+  // 更新访问时间
+  if (query.isVisit) {
+    let now = new Date()
+    await FeatureVisitor.updateOne({
+      visitor_id: user._id,
+    }, 
+    { $set: { 
+      feature: 'talk',
+      visited_date: now
+    }},     
+    {
+      runValidators: true, 
+      upsert: true,
+      //new: true
+    })
+  }
+
   ctx.body = {
     success: true,
     friendTotal,
@@ -1285,6 +1378,7 @@ router.get('/features/help', async (ctx, next) => {
 })
 
 // 获取具体排忧解难
+// TODO 需要判断当前心事是否已经有了回复
 router.get('/help/:id', async (ctx, next) => {
   let { user } = ctx.state
 
@@ -1300,11 +1394,11 @@ router.get('/help/:id', async (ctx, next) => {
   let troubleId = mongoose.Types.ObjectId(ctx.params.id)
   let helps = await Mind.aggregate(
     [
-      { '$lookup': {
-        'from': User.collection.name,
-        'localField': 'creator_id',
-        'foreignField': '_id',
-        'as': 'user'
+      { $lookup: {
+        from: User.collection.name,
+        localField: 'creator_id',
+        foreignField: '_id',
+        as: 'user'
       }},
       { '$lookup': {
         'from': Reply.collection.name,
@@ -1371,9 +1465,9 @@ router.get('/help/:id', async (ctx, next) => {
               'reply_type': "$data.rs.reply_type",
               'creator_id': "$data.rs.creator_id",
               'created_date': "$data.rs.created_date",
-              'username': '$data.us.username',
+              'username': '$data.us.panname',
               'remark': '$data.rec.remark',
-              'receivername': '$data.rus.username',
+              'receivername': '$data.rus.panname',
               'rremark': '$data.rrec.remark',
               'ref_id': '$data.ref._id',
               'ref_title': '$data.ref.title',
@@ -1396,14 +1490,29 @@ router.get('/help/:id', async (ctx, next) => {
         'creator_id': 1,
         'last_reply_date': 1,
         'created_date': 1,
-        'username': '$user.username',
+        'username': '$user.panname',
         // 'remark': '$recipient.remark',
         'reply_count': { '$max': '$replies.count'}
       }}
     ]
   )
   
-  let help = helps && helps.length && helps[0]
+  let help = helps && helps.length && helps[0],
+  now = new Date()
+
+  // 更新访问时间
+  await Visitor.updateOne({
+    visitor_id: user._id,
+    basis_id: help._id,
+  }, 
+  { $set: { 
+    visited_date: now
+  }},     
+  {
+    runValidators: true, 
+    upsert: true,
+    // new: true
+  })
 
   // 我的烦恼总数
   let totalPage = Math.ceil(help.reply_count / limit)
@@ -1469,7 +1578,7 @@ router.get('/recommend/helps', async (ctx, next) => {
         'creator_id': 1,
         'last_reply_date': 1,
         'created_date': 1,
-        'username': '$user.username',
+        'username': '$user.panname',
         'remark': '$recipient.remark'
       }},
       { '$sort': { 'last_reply_date': -1, 'created_date': -1 } },
@@ -1663,72 +1772,6 @@ router.get('/mind/:id', async (ctx, next) => {
     success: true,
     mind
   }
-})
-
-// 引经据典
-router.get('/features/classic', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
-  })
-
-  // 分页
-  let { query } = ctx.request
-  let range = +query.range || constant.PAGE_RANGE
-  let page = +query.page || 1
-  let limit = +query.perPage || constant.LIST_LIMIT
-  let skip = (page - 1) * limit
-  let index = range / 2
-  let lastIndex = range - index
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  // 著作总数
-  let total = await Classic.estimatedDocumentCount()
-  let totalPage = Math.ceil(total / limit)
-  let pageInfo = null
-
-  const nextPage = page < totalPage ? page + 1 : 0
-  if (ctx.state.isXhr) {
-    pageInfo = {
-      nextPage
-    }
-  } else {
-    pageInfo = {
-      currPage: page,
-      prevPage: page > 1 ? page - 1 : 0,
-      pages: pageRange(
-        Math.max(1, page + 1 - index), 
-        Math.min(totalPage, page + lastIndex)
-      ),
-      nextPage
-    }
-  }
-
-  // 查找所有烦恼
-  let classics = await Classic.find({})
-    .select('_id title summary creator_id')
-    .sort({ created_date: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
-
-  // 返回并渲染首页
-  await ctx.fullRender('classics', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    features: constant.FEATURES,
-    noDataTips: constant.NO_CLASSICS,
-    pageInfo,
-    classics,
-    classic: null,
-    info
-  })
-
-  ctx.session.info = null
 })
 
 // 添加章节
@@ -2374,7 +2417,6 @@ router.put('/translate/:id', async (ctx) => {
 router.post('/thank/:mindId', async (ctx, next) => {
   const { mindId } = ctx.params
   const { typeId } = ctx.request.body
-  console.log(typeId)
   const { user } = ctx.state
   let mind = await Mind.findById(
     mindId, 
@@ -2424,30 +2466,6 @@ router.post('/:type/:id/reply', async (ctx, next) => {
         upsert: true
       }
     )
-
-    // 发送回复通知
-    /* const feature = type === 'mind'
-    ? 'mind' 
-    : (
-        type === 'reply' 
-          ? 'karma' 
-          : 'unknow'
-      )
-
-    await Message.updateOne({
-      recipient: receiver_id,
-      feature,
-      sub_feature: 'talk',
-    }, 
-    { $set: { 
-      recipient: receiver_id,
-      feature,
-      sub_feature: 'talk',
-      has_new: true
-    }},     
-    {
-      upsert: true
-    }) */
 
     ctx.body = {
       success: true,
@@ -2580,21 +2598,7 @@ router.post('/friend/:id/send', async (ctx, next) => {
         new: true 
       }
     )
-    await Message.updateOne({ 
-      recipient: id,
-      feature: 'karma',
-      sub_feature: 'friend',
-    }, 
-    { $set: { 
-      recipient: id,
-      feature: 'karma',
-      sub_feature: 'friend',
-      has_new: true
-    }},     
-    {
-      upsert: true, 
-      new: true 
-    })
+
     ctx.body = {
       success: true
     }
@@ -2733,13 +2737,11 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
     let isFriend = (relation.status === 3 && relation.recipient_status === 3)
     let isPending = (relation.status === 2 && relation.recipient_status === 1)
     if (!isFriend && !isPending) {
-      console.log('删除...')
       await Friend.deleteOne(
         { recipient: user.id, requester: id }
       )
     } else {
       if (isFriend) {
-        console.log('移除...')
         await Friend.updateOne(
           { recipient: user.id, requester: id },
           { $set: { status: 0 } },
@@ -2748,7 +2750,6 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
           }
         )
       } else if (isPending) {
-        console.log('拒绝...')
         await Friend.updateOne(
           { recipient: user.id, requester: id },
           { $set: { content }, $unset: { remark: 1 } },
@@ -2760,7 +2761,7 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
     }
 
     // 发送消息给对方
-    await Message.updateOne({ 
+    /* await Message.updateOne({ 
       recipient: id,
       feature: 'karma',
       sub_feature: 'friend',
@@ -2774,7 +2775,7 @@ router.delete('/friend/:id/remove', async (ctx, next) => {
     {
       upsert: true, 
       new: true 
-    })
+    }) */
 
     ctx.body = {
       success: true
