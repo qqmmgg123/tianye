@@ -16,7 +16,7 @@ module.exports = async (ctx, next) => {
         }
       }
     } else {
-      console.error(err.message)
+      console.error(ctx.request.url, err.message)
       const status = err.status || 500;
       ctx.status = status;
       if (!ctx.state.isXhr) {

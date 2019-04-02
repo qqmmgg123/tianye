@@ -23,7 +23,7 @@ let thankSchema = new Schema({
   },
   basis_id: { 
     type: Schema.Types.ObjectId, 
-    ref: 'Share', 
+    ref: 'Mind', 
     alias: 'basis', 
     required: true 
   },

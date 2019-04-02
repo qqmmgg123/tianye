@@ -9,4 +9,6 @@ let messageSchema = new Schema({
   has_new: Boolean,
 })
 
+// messageSchema.index({recipient: 1, feature: 1, sub_feature: 1}, {unique: true});
+
 module.exports = messageSchema
