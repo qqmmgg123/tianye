@@ -1,5 +1,4 @@
 let Schema = require('mongoose').Schema;
-const constant = require('../settings/const')
 
 let FeatureVisitorSchema = new Schema({
   visitor_id: { 

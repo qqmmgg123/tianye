@@ -67,15 +67,15 @@ const constant = {
   // 心念类型
   MIND_TYPE: {
     DIARY: {
-      name: '心语',
+      name: '心声',
       id: 'diary'
     },
     HELP: {
-      name: '心结',
+      name: '烦恼',
       id: 'help'
     },
     SHARE: {
-      name: '心得',
+      name: '感悟',
       id: 'share'
     }
   },
@@ -109,7 +109,7 @@ const constant = {
 
   // 默认图片
   DEFAULT_IMAGE: 'https://dns3.cinehello.com/1529484315_store_PD_BbR2cfWN.png',
-  SUMMARY_LIMIT: 150,
+  SUMMARY_LIMIT: 50,
 }
 
 // 输出模块
