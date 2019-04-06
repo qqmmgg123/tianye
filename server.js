@@ -576,29 +576,28 @@ async function getNotification(uid) {
   ])
 
   // 查找“缘”消息提示
-  let karmaTalkVisit = await FeatureVisitor.findOne({
+  let karmaVisit = await FeatureVisitor.find({
     visitor_id: uid,
-    feature: 'talk'
-  }, 'visited_date')
+    feature: { $in: ['talk', 'friend', 'fate'] }
+  }, 'feature visited_date')
 
-  let friendshipMatch = await Friend.friendshipMatch()
-  friendshipMatch.$match.$expr.$and.push({
-    $gt: [ '$created_date',  karmaTalkVisit ? karmaTalkVisit.visited_date : null ]
-  })
-  let karmaTalkNew = await Mind.aggregate([
-    ...Friend.friendshipQuery(uid),
-    { $unwind: '$recipient'},
-    { $unwind: '$requester'},
-    friendshipMatch,
-    { $count: 'total' }
-  ])
+  let talkVisit = null
+  , friendVisit = null
+  , fateVisit = null
+  if (karmaVisit && karmaVisit.length) {
+    talkVisit = karmaVisit.find(visit => visit.feature === 'talk')
+    friendVisit = karmaVisit.find(visit => visit.feature === 'friend')
+    fateVisit = karmaVisit.find(visit => visit.feature === 'fate')
+  }
+
+  let friendshipMatch = Friend.friendshipMatch()
 
   // 查找“缘谈心”消息提示
   let talkReplyNew = await Mind.aggregate([
     ...Friend.friendshipQuery(uid),
     { $unwind: '$recipient'},
     { $unwind: '$requester'},
-    Friend.friendshipMatch(),
+    friendshipMatch,
     Visitor.queryVisitor(uid),
     { $lookup: {
       from: Reply.collection.name,
@@ -630,6 +629,76 @@ async function getNotification(uid) {
     { $count: 'total' }
   ])
 
+  friendshipMatch.$match.$expr.$and.push({
+    $gt: [ '$created_date',  talkVisit && talkVisit.visited_date || null ]
+  })
+  let karmaTalkNew = await Mind.aggregate([
+    ...Friend.friendshipQuery(uid),
+    { $unwind: '$recipient'},
+    { $unwind: '$requester'},
+    friendshipMatch,
+    { $count: 'total' }
+  ])
+
+  // 查找“有缘人”消息提示
+  let friendNew = await Friend.aggregate(
+    [
+     { $lookup: {
+        from: Friend.collection.name,
+        let: { 'recipient': '$recipient' },
+        pipeline: [
+          { $match: { 
+            recipient: uid, 
+            $expr: { $eq: [ '$requester', '$$recipient' ] }
+          }},
+        ],
+        as: 'friend'
+      }},
+      { $unwind: '$friend' },
+      { $project: {
+        status: 1,
+        recipient_status: '$friend.status',
+        updateAt: 1
+      }},
+      { $match: { 
+        requester: uid,
+        $expr: {
+          $and: [{
+            $or: [{
+              $and: [
+                { 
+                  $eq: ['$status', 3]
+                }, { 
+                  $eq: ['$friend.status', 3] 
+                }
+              ]
+            }, {
+              $and: [
+                { 
+                  $eq: ['$status', 2]
+                }, { 
+                  $eq: ['$friend.status', 1] 
+                }
+              ]
+            }]
+          }, {
+            $gt: [ '$updateAt',  friendVisit && friendVisit.visited_date || null ]
+          }]
+        }
+      }},
+      { $count: 'total' }
+    ]
+  )
+
+  // 查找“投缘”消息提示
+  let fateNewCount = await Thank.countDocuments({
+    winner_id: uid,
+    given_date: {
+      $gt: fateVisit && fateVisit.visited_date || 0
+    }
+  })
+
+  // 序列化消息返回
   let notification = []
   let mindReplyCount = mindReplyNew && mindReplyNew[0] && mindReplyNew[0].total || 0
   mindReplyCount && notification.push({
@@ -640,17 +709,36 @@ async function getNotification(uid) {
 
   let talkReplyCount = talkReplyNew && talkReplyNew[0] && talkReplyNew[0].total || 0
   let karmaTalkCount = karmaTalkNew && karmaTalkNew[0] && karmaTalkNew[0].total || 0
-  if (talkReplyCount || karmaTalkCount) {
-      notification.push({
+  let friendNewCount = friendNew && friendNew[0] && friendNew[0].total || 0
+  if (talkReplyCount || karmaTalkCount || friendNewCount || fateNewCount) {
+    let karmaMsg = {
       feature: 'karma',
       has_new: true,
-      sub_feature: [{
+      sub_feature: [], 
+    }
+    if (talkReplyCount || karmaTalkCount) {
+      karmaMsg.sub_feature.push({
         feature: 'talk',
         reply_total: talkReplyCount,
         mind_total: karmaTalkCount,
         has_new: true
-      }], 
-    })
+      })
+    }
+    if (friendNewCount) {
+      karmaMsg.sub_feature.push({
+        feature: 'friend',
+        total: friendNewCount,
+        has_new: true
+      })
+    } 
+    if (fateNewCount) {
+      karmaMsg.sub_feature.push({
+        feature: 'fate',
+        total: fateNewCount,
+        has_new: true
+      })
+    }
+    notification.push(karmaMsg)
   }
 
   return notification
@@ -671,7 +759,9 @@ router.get('/notification', async (ctx, next) => {
 
 // 有缘人
 router.get('/friend', async (ctx, next) => {
+  let { query } = ctx.request
   let { user } = ctx.state
+  
   let friends = await Friend.aggregate(
     [
      { $lookup: {
@@ -704,6 +794,23 @@ router.get('/friend', async (ctx, next) => {
       }}
     ]
   )
+
+  // 更新访问时间
+  if (query.isVisit) {
+    let now = new Date()
+    await FeatureVisitor.updateOne({
+      visitor_id: user._id,
+    }, 
+    { $set: { 
+      feature: 'friend',
+      visited_date: now
+    }},     
+    {
+      runValidators: true, 
+      upsert: true,
+      //new: true
+    })
+  }
 
   // 返回数据
   ctx.body = {
@@ -1056,7 +1163,8 @@ router.get('/features/diary', async (ctx, next) => {
             }
           },
           type_id: 1,
-         oThanks: {
+          given_date: 1,
+          oThanks: {
             $cond: {
               if: { '$eq': [ '$giver_id', user._id ] },
               then: {            
@@ -1110,6 +1218,7 @@ router.get('/features/diary', async (ctx, next) => {
           },
         }
       },
+      { $sort: { 'given_date': -1 } },
       {
         $group : {
           _id : '$user_id',
@@ -1117,6 +1226,9 @@ router.get('/features/diary', async (ctx, next) => {
           mUnderstandTotal: { $sum: '$mUnderstands' },
           oThankTotal: { $sum: '$oThanks' },
           oUnderstandTotal: { $sum: '$oUnderstands' },
+          giver_id: { $first: '$giver_id' },
+          type_id: { $first: '$type_id' },
+          given_date: { $first: '$given_date' }
         }
       },
       { $lookup: {
@@ -1169,29 +1281,40 @@ router.get('/features/diary', async (ctx, next) => {
           }, 
         }
       },
+      { $skip: skip },
+      { $limit: limit },
       {
         $project: {
           _id: 1,
+          giver_id: 1,
           panname: '$giver.panname',
           oThankTotal: 1,
           oUnderstandTotal: 1,
           mThankTotal: 1,
+          type_id: 1,
           mUnderstandTotal: 1,
-          total: { 
-            $add: [
-              '$mThankTotal', 
-              '$mUnderstandTotal', 
-              '$oThankTotal', 
-              '$oUnderstandTotal'
-            ] 
-          }
+          given_date: 1
         }
-      },
-      { $sort: { 'total': -1 } },
-      { $skip: skip },
-      { $limit: limit }
+      }
     ]
- )
+  )
+
+  // 更新访问时间
+  if (query.isVisit) {
+    let now = new Date()
+    await FeatureVisitor.updateOne({
+      visitor_id: user._id,
+    }, 
+    { $set: { 
+      feature: 'fate',
+      visited_date: now
+    }},     
+    {
+      runValidators: true, 
+      upsert: true,
+      //new: true
+    })
+  }
 
   // 返回并渲染首页
   ctx.body = {
@@ -1351,7 +1474,6 @@ router.get('/features/help', async (ctx, next) => {
     friendTotal = await Friend.getFriendTotal(user._id)
   }
 
-  console.log(typeof query.isVisit)
   // 更新访问时间
   if (query.isVisit) {
     let now = new Date()

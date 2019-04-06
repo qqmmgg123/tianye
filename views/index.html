@@ -13,19 +13,30 @@
     <!-- QQ强制全屏 -->
     <meta name="x5-fullscreen" content="true">
     <title><%= title %></title>
+    <link href="//at.alicdn.com/t/font_1121893_0kr8egnfoya.css" rel="stylesheet">
     <style>
+      body {
+        font: 12px/1.8 Helvetica,Arial,sans-serif;
+        color: #333333;
+        background-color: #F5FDFA;
+      }
       .main {
         text-align: center;
       }
       .qrcode {
         display: inline-flex;
       }
-      .qrcode > div {
-        width: 200px;
-        height: 200px;
+      .qrcode .split {
+        width: 100px;
+      }
+      .qrcode .android .code ,
+      .qrcode .ios .code {
+        width: 100px;
+        height: 100px;
         border: 1px solid #ccc;
+        background-color: white;
         text-align: center;
-        line-height: 200px;
+        line-height: 100px;
       }
     </style>
     <!--<script>
@@ -50,8 +61,21 @@
     <h1><%= appName %></h1>
     <h2><%= slogan %></h2>
     <div class="qrcode">
-      <div class="android">二维码</div>
-      <div class="ios">二维码</div>
+      <div class="android">
+        <h3 class="device">
+          <i class="iconfont icon-ios"></i>
+          <strong>IOS</strong>
+        </h3>
+        <div class="code">二维码</div>
+      </div>
+      <div class="split"></div>
+      <div class="ios">
+        <h3 class="device">
+          <i class="iconfont icon-android"></i>
+          <strong>Android</strong>
+        </h3>
+        <div class="code">二维码</div>
+      </div>
     </div>
   </div>
 </body>
