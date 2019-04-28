@@ -1,0 +1,161 @@
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  font: 12px/1.8 Helvetica,Arial,sans-serif;
+  color: #333333;
+  background-color: #fafafa;
+}
+body, h1, h2, h3 {
+  margin: 0;
+  padding: 0;
+}
+h1, h2, h3 {
+  font-weight: normal;
+}
+button {
+  border: 1px solid #dddddd;
+  outline: none;
+  background: white;
+  color: #666666;
+  vertical-align: middle;
+  line-height: 22px;
+  padding: 0 20px;
+  height: 44px;
+  border-radius: 3px;
+  cursor: pointer;
+  &[disabled] {
+    color: #999999;
+    background-color: #f0f0f0;
+    border: 1px solid #eaeaea;
+  }
+  &:hover {
+    border-color: orange;
+    color: orange;
+  }
+  &:active {
+    border-color: red;
+    color: red;
+  }
+}
+.main {
+  text-align: center;
+}
+h1 {
+  width: 100px;
+  margin: 20px auto 0;
+  height: 44px;
+  line-height: 44px;
+  box-sizing: border-box;
+  font-size: 24px;
+  > svg {
+    float: left;
+  }
+  > strong {
+    margin-left: 20px;
+    margin-bottom: 10px;
+    font-weight: normal;
+  }
+}
+h2 {
+  margin-top: 20px;
+  height: 32px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  font-size: 14px;
+}
+.qrcode {
+  display: inline-block;
+  .split {
+    width: 100px;
+  }
+}
+.qrcode .android .code ,
+.qrcode .ios .code {
+  width: 100px;
+  height: 100px;
+  border: 1px solid #ccc;
+  background-color: white;
+  text-align: center;
+  line-height: 100px;
+}
+.qrcode .android button,
+.qrcode .ios button {
+  margin-top: 20px;
+  font-size: 16px;
+}
+.sample {
+  background-image: url('/static/images/sample.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  height: calc(100% - 242px);
+  /*!autoprefixer:off*/
+  height: -webkit-calc(100% - 242px);
+  height: -moz-calc(100% - 242px);
+  /*autoprefixer:on*/
+  height: -o-calc(100% - 242px);
+  margin-top: 20px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+}
+.footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  text-align: center;
+  height: 42px;
+  line-height: 42px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #666666;
+}
+.guide-pop {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  .arrow {
+    position: absolute;
+    z-index: 999;
+    right: 20px;
+    top: 40px;
+  }
+}
+.guide-pop > .dialog {
+  font-size: 16px;
+  color: #ffffff;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  /*!autoprefixer:off*/
+  -webkit-transform: translateX(-50%);
+  -ms-transform: translateX(-50%);
+  /*autoprefixer:on*/
+  z-index: 999;
+  top: 20%;
+  .close {
+    color: #ffffff;
+    width: 24px;
+    height: 24px;
+    .iconfont {
+      font-size: 24px;
+    }
+  }
+  li {
+    height: 36px;
+    line-height: 36px;
+    white-space: nowrap;
+  }
+}
+.guide-pop > .modal {
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+  opacity: 0.8;
+  position: absolute;
+}

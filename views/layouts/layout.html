@@ -11,7 +11,11 @@
   <script>
     var globalDataStr='<%= globalData %>'
   </script>
+  <% if (need_global_script) { %>
   <script src="/static/js/global.js"></script>
+  <% } %>
+  <% if (need_auto_script) { %>
   <script src="<%= pageScriptFile %>"></script>
+  <% } %>
 </body>
 </html>

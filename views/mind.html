@@ -1,0 +1,31 @@
+<div class="content">
+  <h3><%= mind.title || '' %></h3>
+  <div class="content-viewer">
+    <%= mind.content || '' %>
+    <a class="download-btn button" href="/">下载田野APP，结交知心朋友 -></a>
+  </div>
+</div>
+<div class="ctrl-bar">
+  <a>
+    <div>
+      <i class="iconfont icon-huifucopy2"></i>
+      <div>引用</div>
+    </div>
+  </a>
+  <a href="/">
+    <div>
+      <i class="iconfont icon-xin"></i>
+      <% if (mind.type_id === 'share') { %>
+      <div>认同</div>
+      <% } else if (mind.type_id === 'help') { %>
+      <div>理解</div>
+      <% } %>
+    </div>
+  </a>
+  <a href="/">
+    <div>
+      <i class="iconfont icon-jubao"></i>
+      <div>举报</div>
+    </div>
+  </a>
+</div>

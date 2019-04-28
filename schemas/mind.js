@@ -4,6 +4,7 @@ const constant = require('../settings/const')
 let mindSchema = new Schema({
   type_id: {
     type: String,
+    enum: ['diary', 'help', 'share'],
     required: [
       true, 
       constant.MISS_PARAMS
@@ -50,18 +51,18 @@ let mindSchema = new Schema({
       constant.MISS_PARAMS
     ],
   },
+  // 查看权限类型
+  perm_id: {
+    type: String,
+    enum: ['me', 'friend', 'all'],
+    required: [
+      true, 
+      constant.MISS_PARAMS
+    ],
+  },
   // 最新的回复
   last_reply_id: { 
     type: Schema.Types.ObjectId
-  },
-  // 创建者临时名称
-  creator_temp_name: { 
-    type: String, 
-    trim: true, 
-    maxlength: [
-      24, 
-      constant.USERNAME_MAXLEN_ERROR
-    ]
   },
   created_date: { 
     type: Date, 
@@ -79,16 +80,28 @@ let mindSchema = new Schema({
   },
 })
 
+// 引用
 mindSchema.virtual('quote', {
-  ref: 'Classic',
+  ref: 'Quote',
   localField: 'ref_id',
   foreignField: '_id'
 })
 
-mindSchema.virtual('new_reply', {
-  ref: 'Reply',
-  localField: 'last_reply_id',
-  foreignField: '_id'
+mindSchema.pre('save', async function() {
+  this.title && (this.title = this.title.replace(/\r|\n|\t/gi, ''))
+  if (!this.perm_id) {
+    switch (type_id) {
+      case 'diary':
+        this.perm_id === 'me'
+        break
+      case 'help':
+        this.perm_id === 'friend'
+        break
+      case 'share':
+        this.perm_id === 'all'
+        break
+    }
+  }
 })
 
 module.exports = mindSchema

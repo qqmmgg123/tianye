@@ -1,12 +1,13 @@
 const passport = require('koa-passport')
 const User = require('./models/user')
+const Verification = require('./models/verification')
 const utils = require('./utils')
 const scmp = require('scmp')
 const constant = require('./settings/const')
 
 // This is an example! Use password hashing in your project and avoid storing passwords in your code
-async function fetchUser(username, password) {
-  const user = await User.findOne({ username }).select('hash salt username panname email')
+async function verifyPassword(username, password) {
+  const user = await User.findOne({ email: username.trim() }).select('hash salt nickname email')
   if (user) {
     const hashRaw = await utils.pbkdf2(password, user.salt)
     let hash = new Buffer(hashRaw, 'hex')//.toString('hex')
@@ -19,7 +20,26 @@ async function fetchUser(username, password) {
       throw new Error(constant.PASSWORD_ERROR)
     }
   } else {
-    throw new Error(constant.USERNAME_ERROR)
+    throw new Error(constant.USER_NOT_EXISTS)
+  }
+}
+
+async function verifyCode(email, code) {
+  email = email.trim()
+  const user = await User.findOne({ email }).select('nickname email')
+  if (user) {
+    let vcode = await Verification.findOne({ 
+      email: email,
+      code: code
+    }, 'email code').lean()
+  
+    if (vcode) {
+      return user
+    } else {
+      throw new Error(constant.VCODE_ERROR)
+    }
+  } else {
+    throw new Error(constant.USER_NOT_EXISTS)
   }
 }
 
@@ -37,58 +57,23 @@ passport.deserializeUser(async function(id, done) {
 })
 
 const LocalStrategy = require('passport-local').Strategy
-passport.use(new LocalStrategy(function(username, password, done) {
-  fetchUser(username, password)
+passport.use(new LocalStrategy({
+  usernameField: 'email'
+}, function(username, password, done) {
+  verifyPassword(username, password)
     .then(user => {
       done(null, user)
     })
     .catch(err => done(err))
 }))
 
-const QqStrategy = require('passport-qq').Strategy
-passport.use(new QqStrategy({
-    clientID: 'your-client-id',
-    clientSecret: 'your-secret',
-    callbackURL: 'http://localhost:' + (process.env.PORT || 3000) + '/auth/qq/callback'
-  },
-  function (token, tokenSecret, profile, done) {
-    // retrieve user ...
-    fetchUser().then(user => done(null, user))
-  }
-))
-
-const FacebookStrategy = require('passport-facebook').Strategy
-passport.use(new FacebookStrategy({
-    clientID: 'your-client-id',
-    clientSecret: 'your-secret',
-    callbackURL: 'http://localhost:' + (process.env.PORT || 3000) + '/auth/facebook/callback'
-  },
-  function(token, tokenSecret, profile, done) {
-    // retrieve user ...
-    fetchUser().then(user => done(null, user))
-  }
-))
-
-const TwitterStrategy = require('passport-twitter').Strategy
-passport.use(new TwitterStrategy({
-    consumerKey: 'your-consumer-key',
-    consumerSecret: 'your-secret',
-    callbackURL: 'http://localhost:' + (process.env.PORT || 3000) + '/auth/twitter/callback'
-  },
-  function(token, tokenSecret, profile, done) {
-    // retrieve user ...
-    fetchUser().then(user => done(null, user))
-  }
-))
-
-const GoogleStrategy = require('passport-google-auth').Strategy
-passport.use(new GoogleStrategy({
-    clientId: 'your-client-id',
-    clientSecret: 'your-secret',
-    callbackURL: 'http://localhost:' + (process.env.PORT || 3000) + '/auth/google/callback'
-  },
-  function(token, tokenSecret, profile, done) {
-    // retrieve user ...
-    fetchUser().then(user => done(null, user))
+const VcodeStrategy = require('./passport-code').Strategy
+passport.use(new VcodeStrategy(
+  function(email, code, done) {
+    verifyCode(email, code)
+      .then(user => {
+        done(null, user)
+      })
+      .catch(err => done(err))
   }
 ))

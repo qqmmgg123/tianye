@@ -18,30 +18,51 @@ Friend.statics.requesterQuery = function(uid) {
   }}
 }
 
+Friend.statics.receiverRequesterQuery = function(uid) {
+  return { $lookup: {
+    from: this.collection.name,
+    let: { 'user_id': '$receiver_id' },
+    pipeline: [
+      { $match: { 
+        requester: uid,
+        $expr: { $eq: [ '$recipient', '$$user_id' ] }
+      }},
+      { $project: {
+        remark: 1
+      }},
+    ],
+    as: 'friend_receiver'
+  }}
+}
+
 // 获取有缘人关系
 Friend.statics.friendshipQuery = function(uid) {
-  return [{ $lookup: {
-    from: this.collection.name,
-    let: { 'creator_id': '$creator_id' },
-    pipeline: [{ 
-      $match: { 
-        recipient: uid,
-        $expr: { $eq: [ '$requester', '$$creator_id' ] }
-      }
-    }],
-    as: 'requester'
-  }},
-  { $lookup: {
-    from: this.collection.name,
-    let: { 'creator_id': '$creator_id' },
-    pipeline: [{ 
-      $match: { 
-        requester: uid,
-        $expr: { $eq: [ '$recipient', '$$creator_id' ] }
-      }
-    }],
-    as: 'recipient'
-  }}]
+  if (uid) {
+    return [{ $lookup: {
+      from: this.collection.name,
+      let: { 'creator_id': '$creator_id' },
+      pipeline: [{ 
+        $match: { 
+          recipient: uid,
+          $expr: { $eq: [ '$requester', '$$creator_id' ] }
+        }
+      }],
+      as: 'requester'
+    }},
+    { $lookup: {
+      from: this.collection.name,
+      let: { 'creator_id': '$creator_id' },
+      pipeline: [{ 
+        $match: { 
+          requester: uid,
+          $expr: { $eq: [ '$recipient', '$$creator_id' ] }
+        }
+      }],
+      as: 'recipient'
+    }}]
+  } else {
+    return []
+  }
 }
 
 // 心事匹配是否为有缘人关系
@@ -75,8 +96,48 @@ Friend.statics.friendshipMatch = function() {
   }
 }
 
+// 心事匹配是否为非有缘人关系
+Friend.statics.neFriendshipMatch = function(uid) {
+  let sharematch = {
+    $or: [
+      {
+        $and: [
+          { $eq: ['$type_id', 'help'] },
+        ]
+      }, {
+        $and: [
+          { $eq: ['$type_id', 'share'] },
+        ]
+      }
+    ]
+  }
+
+  if (!uid) {
+    return { 
+      $match: {  
+        $expr: sharematch
+      }
+    }
+  } else {
+    let frinedMatch = { 
+      $and: [{
+        $ne: ['$recipient.status', 3]
+      }, { 
+        $ne: ['$requester.status', 3]
+      }, {
+        $ne: ['$creator_id', uid]
+      }, sharematch]
+    }
+    return { 
+      $match: {  
+        $expr: frinedMatch
+      }
+    }
+  }
+}
+
 // 心事回复匹配是否为有缘人关系
-Friend.statics.replyfriendshipMatch = function(uid) {
+Friend.statics.replyfriendshipMatch = function(uid, mindId) {
   return { 
     $match: { 
       $expr: { 
@@ -84,16 +145,16 @@ Friend.statics.replyfriendshipMatch = function(uid) {
           { 
             $eq: [ 
               '$parent_id', 
-              '$$mind_id' 
+              mindId ? mindId : '$$mind_id'
             ]
           }, { 
             $or: [
               { 
                 $and: [
                   { 
-                    $eq: [{ $min: '$recipient.status' }, 3]
+                    $eq: ['$recipient.status', 3]
                   }, { 
-                    $eq: [{ $min:'$requester.status' }, 3] 
+                    $eq: ['$requester.status', 3] 
                   }
                 ]
               }, { 

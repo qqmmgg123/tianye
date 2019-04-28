@@ -1,6 +1,7 @@
 const constant = {
   APP_NAME: '田野',
   APP_SLOGAN: '耕耘内心',
+  ICP_CODE: '赣ICP备19004410号-1',
 
   // 表单提示语
   DIARY_HOLDER: '记录点滴心语...',
@@ -9,25 +10,30 @@ const constant = {
   SHARE_HOLDER: '内容...',
   REPLY_HOLDER: '回复',
   USERNAME_HOLDER: '用户名',
+  NICKNAME_HOLDER: '称号',
   PASSWORD_HOLDER: '密码',
   EMAIL_HOLDER: '邮箱',
 
   // 表单错误
   MISS_PARAMS: '缺少参数 :(',
   NO_CONTENT: '正文没有内容 :(',
-  TITLE_REQUIRED: '标题没有写 :(',
+  TITLE_REQUIRED: '标题需要填写:(',
   USER_EXISTS: '该用户已经存在 :(',
   USER_NOT_EXISTS: '该用户不存在 :(',
-  USERNAME_ERROR: '用户名不存在 :(',
-  USERNAME_REQUIRED: '用户名用来识别和保存你的内容，请不要留空 :(',
-  PANNAME_CAN_NOT_EMPTY: '抱歉，请给自己取一个的对外的笔名',
-  EMAIL_REQUIRED: '邮箱用于验证当前是否为您本人操作，请不要留空 :(',
+  NICKNAME_REQUIRED: '称号请不要留空 :(',
+  NICKNAME_CAN_NOT_EMPTY: '抱歉，请给自己一个的称号',
+  EMAIL_REQUIRED: '邮箱请不要留空 :(',
+  MISSING_PASSWORD_ERROR: '密码请不要留空 :(',
   OVER_MAX_SUMMARYLENGTH: '摘要不能超出150个字符',
   EMAIL_EXISTS: '该邮箱已经被使用 :(',
   USERNAME_MAXLEN_ERROR: '用户名称最多24个字 :(',
+  NICKNAME_MAXLEN_ERROR: '称号最多24个字 :(',
   CONTENT_MAXLEN_ERROR: '内容最多30个字 :(',
   REMARK_MAXLEN_ERROR: '备注最多24个字 :(',
   PASSWORD_ERROR: '密码错误 :(',
+  PASSWORD_DIFFERENT_ERROR: '两次输入密码不一致。',
+  PASSWORD_SAME_ERROR: '新密码和旧密码一样的。',
+  INCORRECT_OLD_PASSWORD_ERROR: '原密码错误 :(',
   CODE_REQUIRED: '验证码没有输入 :(',
   VCODE_ERROR: '验证码错误 :(',
   SECTION_CLASSIC_NOT_EXIST: '您要添加章节的典籍不存在。',
@@ -48,7 +54,7 @@ const constant = {
   MINE_FRIEND_REQUESTING: '对方正在申请您为{{FRIEND_NAME}}',
   OTHER_FRIEND_NOT_REQUESTING: '对方并没有向您发出添加为{{FRIEND_NAME}}的申请',
 
-  PANNAME_SET_TIPS: '为保护您的个人信息，对外发布内容，请设置一个可以公开的笔名。',
+  NICKNAME_SET_TIPS: '为保护您的个人信息，对外发布内容，请设置一个可以公开的笔名。',
 
   FRIEND_NAME: '有缘人',
   ANONYMOUS_NAME: '匿名',
@@ -67,7 +73,7 @@ const constant = {
   // 心念类型
   MIND_TYPE: {
     DIARY: {
-      name: '心声',
+      name: '心事',
       id: 'diary'
     },
     HELP: {
@@ -108,7 +114,7 @@ const constant = {
   AUTHENTICATION_FAILURE_ERR: '需要用户登录.',
 
   // 默认图片
-  DEFAULT_IMAGE: 'https://dns3.cinehello.com/1529484315_store_PD_BbR2cfWN.png',
+  DEFAULT_IMAGE: 'https://tianyeapp.top/static/images/logo_tianye.png',
   SUMMARY_LIMIT: 50,
 }
 

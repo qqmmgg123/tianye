@@ -36,7 +36,7 @@ input, select {
   border: 1px solid #cccccc;
   vertical-align: middle;
   line-height: 22px;
-  padding: 3px 7px 4px;
+  padding: 10px;
   box-shadow: 0 0 0px 1000px white inset!important;
 }
 
@@ -62,9 +62,10 @@ textarea, .rich-textarea {
   resize: none;
   width: 100%;
   box-sizing: border-box;
+  -moz-box-sizing: border-box;
   vertical-align: middle;
   line-height: 22px;
-  padding: 3px 7px 4px;
+  padding: 10px;
 }
 button {
   cursor: pointer;
@@ -75,7 +76,7 @@ button, .button, .page-num {
   color: #666666;
   vertical-align: middle;
   line-height: 22px;
-  padding: 3px 7px 4px;
+  padding: 10px;
   &[disabled] {
     color: lighten($gray, 68%);
     background-color: lighten($gray, 95%);
@@ -100,65 +101,114 @@ a.button {
   color: #666666;
 }
 nav {
-  background-color: white;
+  background-color: #fafafa;
   a {
     line-height: 22px;
-    padding: 3px 7px 4px;
+    padding: 10px;
     font-size: 14px;
     margin-right: 20px;
   }
 }
 header {
   border-bottom: 1px solid lighten($gray, 90%);
+  background-color: #fafafa;
   .head-inner {
-    padding: 3px 7px 4px;
+    height: 42px;
+    line-height: 42px;
     max-width: $viewWidth;
     margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     box-sizing: border-box;
+    -moz-box-sizing: border-box;
     i.iconfont {
+      text-align: center;
       font-size: 24px;
+      width: 42px;
       display: none;
       cursor: pointer;
-    }
-    h1, h2 {
-      display: inline;
-      font-weight: normal;
+      float: right;
     }
     h1 {
-      color: red;
+      font-size: 16px;
+      width: 78px;
+      height: 42px;
+      overflow: hidden;
+      svg {
+        margin-left: 10px;
+        margin-top: 6px;
+        margin-right: 10px;
+        float: left;
+      }
+    }
+    h1, h2 {
+      font-weight: normal;
+      float: left;
     }
     h2 {
-      color: orange;
-      margin-left: 10px;
+      font-size: 14px;
+      text-align: center;
+      box-sizing: border-box;
+      -moz-box-sizing: border-box;
     }
   }
 }
-@media screen and (max-width: $viewWidth) {
+/* @media screen and (min-width: $viewWidth) { */
   nav {
-    display: none;
-    border-bottom: 1px solid lighten($gray, 90%);
-    justify-content: flex-end;
-    width: 100%;
-    position: absolute;
-    top: 100%;
+    float: right;
+    .download-btn {
+      margin-right: 10px;
+      padding: 0 20px;
+      height: 36px;
+      line-height: 36px;
+      box-sizing: border-box;
+      -moz-box-sizing: border-box;
+    }
   }
   header {
     .head-inner {
       position: relative;
+      h2:before {
+        content: '，'
+      }
+    }
+  }
+/* } */
+
+/* 当nav项大于1个时 */
+/* @media screen and (max-width: $viewWidth) {
+  nav {
+    display: none;
+    border-bottom: 1px solid lighten($gray, 90%);
+    width: 100%;
+    position: absolute;
+    top: 100%;
+  }
+  .show {
+    display: block;
+  }
+  .hide {
+    display: none;
+  }
+  header {
+    .head-inner {
+      position: relative;
+      h2 {
+        width: calc(100% - 156px);
+        \/*!autoprefixer:off*\/
+        width: -webkit-calc(100% - 156px);
+        width: -moz-calc(100% - 156px);
+        \/*autoprefixer:on*\/
+        width: -o-calc(100% - 156px);
+      }
       i.iconfont {
         display: inline;
       }
     }
   }
-}
+} */
 .crumbs {
-  padding: 3px 7px 4px;
+  padding: 10px;
 }
 .main {
-  margin-top: 20px;
   flex: 1;
   .view-area {
     max-width: $viewWidth;
@@ -167,7 +217,7 @@ header {
 }
 .features {
   margin-top: 20px;
-  padding: 3px 7px 4px;
+  padding: 10px;
   display: flex;
   align-items: center;
   a {
@@ -187,7 +237,7 @@ header {
   }
 }
 .content {
-  padding: 3px 7px 4px;
+  padding: 10px;
   .temp-name {
     color: #999;
     font-size: 14px;
@@ -200,7 +250,7 @@ header {
 }
 .editor, .searchBar {
   margin-top: 10px;
-  padding: 3px 7px 4px;
+  padding: 10px;
   .form-tips {
     margin: 7px 0;
     padding: 7px;
@@ -210,14 +260,15 @@ header {
     input, select {
       width: 100%;
       box-sizing: border-box;
+      -moz-box-sizing: border-box;
     }
   }
 }
 .columns {
-  padding: 3px 7px 4px;
+  padding: 10px;
 }
 .list {
-  padding: 3px 7px 4px;
+  padding: 10px;
   > .item {
     > .temp-name {
       color: #999;
@@ -245,7 +296,7 @@ header {
         background: #333333;
         color: white;
         font-size: 12px;
-        padding: 3px 7px 4px;
+        padding: 10px;
         border-radius: 3px;
         bottom: 0px;
         left: 100px;
@@ -267,7 +318,7 @@ header {
     }
   }
   .pagination {
-    padding: 3px 7px 4px;
+    padding: 10px;
     display: flex;
     justify-content: flex-end;
     .page-num {

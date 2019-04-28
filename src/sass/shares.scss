@@ -3,7 +3,7 @@
   .form-group {
     margin-bottom: 10px;
     .help-info {
-      padding: 3px 7px 4px;
+      padding: 10px;
       box-sizing: border-box;
       color: lighten($gray, 60%);
     }
@@ -42,7 +42,7 @@
         color: lighten($gray, 68%);
         background-color: lighten($gray, 95%);
         border: 1px solid lighten($gray, 90%);
-        padding: 3px 7px 4px;
+        padding: 10px;
         span, .iconfont {
           height: 12px;
           line-height: 12px;
@@ -76,7 +76,7 @@ ol.list {
     ol.replies {
       border: 1px solid lighten($gray, 90%);
       border-radius: 3px;
-      padding: 3px 7px 4px;
+      padding: 10px;
     }
   }
 }

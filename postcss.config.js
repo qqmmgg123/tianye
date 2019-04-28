@@ -4,8 +4,9 @@ module.exports = {
     require('cssnano')({
       preset: 'default',
     }),
-    //require('postcss-pxtorem')({
-      //rootValue: 100
-    //})
+    require('postcss-pxtorem')({
+      rootValue : 32,
+      propList   : ['*'],
+    })
   ]
 }
