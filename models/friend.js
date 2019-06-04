@@ -1,10 +1,10 @@
 let mongoose = require('mongoose')
 let Friend = require('../schemas/friend')
 
-Friend.statics.requesterQuery = function(uid) {
+Friend.statics.requesterQuery = function(uid, name = 'creator_id') {
   return { $lookup: {
     from: this.collection.name,
-    let: { 'user_id': '$creator_id' },
+    let: { 'user_id': '$' + name },
     pipeline: [
       { $match: { 
         requester: uid,
@@ -35,27 +35,27 @@ Friend.statics.receiverRequesterQuery = function(uid) {
   }}
 }
 
-// 获取有缘人关系
-Friend.statics.friendshipQuery = function(uid) {
+// 获取知己关系
+Friend.statics.friendshipQuery = function(uid, name = 'creator_id') {
   if (uid) {
     return [{ $lookup: {
       from: this.collection.name,
-      let: { 'creator_id': '$creator_id' },
+      let: { 'user_id': '$' + name },
       pipeline: [{ 
         $match: { 
           recipient: uid,
-          $expr: { $eq: [ '$requester', '$$creator_id' ] }
+          $expr: { $eq: [ '$requester', '$$user_id' ] }
         }
       }],
       as: 'requester'
     }},
     { $lookup: {
       from: this.collection.name,
-      let: { 'creator_id': '$creator_id' },
+      let: { 'user_id': '$' + name },
       pipeline: [{ 
         $match: { 
           requester: uid,
-          $expr: { $eq: [ '$recipient', '$$creator_id' ] }
+          $expr: { $eq: [ '$recipient', '$$user_id' ] }
         }
       }],
       as: 'recipient'
@@ -65,7 +65,32 @@ Friend.statics.friendshipQuery = function(uid) {
   }
 }
 
-// 心事匹配是否为有缘人关系
+// 心事匹配没有请求过好友的
+Friend.statics.neReqfriendMatch = function() {
+  return {
+    $match: { 
+      $expr: {
+        $and: [
+          {
+            $eq: [{
+              $ifNull: [{ 
+                $min: '$requester.status' 
+              }, 0]
+            }, 0] 
+          }, {
+            $eq: [{
+              $ifNull: [{ 
+                $min: '$recipient.status' 
+              }, 0]
+            }, 0] 
+          }, 
+        ]
+      }, 
+    }
+  }
+}
+
+// 心事匹配是否为知己关系
 Friend.statics.friendshipMatch = function() {
   return { 
     $match: {  
@@ -96,47 +121,48 @@ Friend.statics.friendshipMatch = function() {
   }
 }
 
-// 心事匹配是否为非有缘人关系
+// 心事匹配是否为非知己关系
 Friend.statics.neFriendshipMatch = function(uid) {
-  let sharematch = {
-    $or: [
-      {
-        $and: [
-          { $eq: ['$type_id', 'help'] },
-        ]
-      }, {
-        $and: [
-          { $eq: ['$type_id', 'share'] },
-        ]
-      }
+  let match = {
+    $and: [
+      { $eq: ['$perm_id', 'all'] },
+      { $or: [
+        {
+          $and: [
+            { $eq: ['$type_id', 'help'] },
+          ]
+        }, {
+          $and: [
+            { $eq: ['$type_id', 'share'] },
+          ]
+        }
+      ] }
     ]
   }
 
   if (!uid) {
     return { 
       $match: {  
-        $expr: sharematch
+        $expr: match
       }
     }
   } else {
-    let frinedMatch = { 
-      $and: [{
-        $ne: ['$recipient.status', 3]
-      }, { 
-        $ne: ['$requester.status', 3]
-      }, {
-        $ne: ['$creator_id', uid]
-      }, sharematch]
-    }
+    match.$and = match.$and.concat([{
+      $ne: ['$recipient.status', 3]
+    }, { 
+      $ne: ['$requester.status', 3]
+    }, {
+      $ne: ['$creator_id', uid]
+    }])
     return { 
       $match: {  
-        $expr: frinedMatch
+        $expr: match
       }
     }
   }
 }
 
-// 心事回复匹配是否为有缘人关系
+// 心事回复匹配是否为知己关系
 Friend.statics.replyfriendshipMatch = function(uid, mindId) {
   return { 
     $match: { 
@@ -168,7 +194,7 @@ Friend.statics.replyfriendshipMatch = function(uid, mindId) {
   }
 }
 
-// 获取有缘人数目
+// 获取知己数目
 Friend.statics.getFriendTotal = async function(uid) {
   let friends = await this.aggregate(
     [
@@ -204,24 +230,7 @@ Friend.statics.getFriendTotal = async function(uid) {
     || 0
 }
 
-// 最新回复匹配是否是针对当前用户的心事
-Friend.statics.lastReplyMatch = function(uid) {
-  return { 
-    $match: { 
-      $expr: { 
-        $and: [
-          {
-            $eq: [ '$parent_id', '$$mind_id' ]
-          }, {
-            $ne: [ '$creator_id', uid ]
-          }, 
-        ],
-      }
-    }
-  }
-}
-
-// 最新针对当前用户心事回复匹配是否为有缘人关系
+// 最新针对当前用户心事回复匹配是否为知己关系
 Friend.statics.newReplyfriendshipMatch = function(uid) {
   return { 
     $match: { 
@@ -246,7 +255,7 @@ Friend.statics.newReplyfriendshipMatch = function(uid) {
   }
 }
 
-// 最新心事回复匹配是否为有缘人关系
+// 最新心事回复匹配是否为知己关系
 Friend.statics.lastReplyfriendshipMatch = function(uid) {
   return { 
     $match: { 

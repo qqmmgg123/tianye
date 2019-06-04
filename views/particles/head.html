@@ -11,10 +11,13 @@
   <!-- QQ强制全屏 -->
   <meta name="x5-fullscreen" content="true">
   <title><%= title %></title>
-  <link href="//at.alicdn.com/t/font_942830_8cz9fchi74r.css" rel="stylesheet">
-  <link href="<%= globalStyleFile %>" rel="stylesheet">
-  <link href="<%= pageStyleFile %>" rel="stylesheet">
+  <link href="//at.alicdn.com/t/font_1197366_yi56zp8hja.css" rel="stylesheet">
+  <link href="<%= globalStyleFile %>?v=201905030333" rel="stylesheet">
+  <link href="<%= pageStyleFile %>?v=201905030333" rel="stylesheet">
   <% if (need_dom4_script) { %>
   <script src="//cdnjs.cloudflare.com/ajax/libs/dom4/2.0.0/dom4.js">/* DOM4 */</script>
+  <% } %>
+  <% if (is_wechat) { %>
+  <script src='https://res2.wx.qq.com/open/js/jweixin-1.4.0.js'></script>
   <% } %>
 </head>

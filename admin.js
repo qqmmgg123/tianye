@@ -3,6 +3,7 @@ const program = require('commander')
 const mongoose = require('mongoose')
 const User = require('./models/user')
 const Version = require('./models/version')
+const fs = require('fs')
 
 const dbLink = process.env.DBLINK || 'mongodb://localhost:27018/tianye'
 
@@ -11,10 +12,42 @@ mongoose.Promise = global.Promise;
 mongoose.set('useCreateIndex', true)
 mongoose.connect(dbLink, { useNewUrlParser: true })
 
-async function addSuper(email) {
+function delDir(path){
+  let files = [];
+  if(fs.existsSync(path)){
+      files = fs.readdirSync(path);
+      files.forEach((file, index) => {
+          let curPath = path + "/" + file;
+          if(fs.statSync(curPath).isDirectory()){
+              delDir(curPath); //递归删除文件夹
+          } else {
+              fs.unlinkSync(curPath); //删除文件
+          }
+      });
+      fs.rmdirSync(path);
+  }
+}
+
+function delFile(path) {
+  return new Promise((resove, reject) => {
+    if (fs.existsSync(path)) {
+      fs.unlink(path, (err) => {
+        if(err){
+          reject(err)
+        } else {
+          resove('文件删除成功')
+        }
+      });
+    } else {
+      reject(new Error("文件不存在"))
+    }
+  })
+}
+
+async function addSuper(phone) {
   try {
-    await User.updateOne({ email }, { super: true })
-    console.log('已添加' + email + '为超级管理员')
+    await User.updateOne({ phone }, { super: true })
+    console.log('已添加' + phone + '为超级管理员')
   } catch (err) {
     console.log('错误:' + err.message)
   }
@@ -25,9 +58,12 @@ async function addVersion(newVersion, message) {
   try {
     let versions = await Version.find({}).limit(1).sort({ version_code: -1 })
     , version = versions && versions.length && versions[0]
+    , versionCode = +newVersion
+    , versionName = (100 + versionCode + '').split('').join('.')
+    , oldName = (100 + (versionCode - 1) + '').split('').join('.')
     , options = {
-      url: 'https://www.tianyeapp.top/static/Tianyemobile-v' + newVersion + '.apk',
-      version_code: +newVersion,
+      url: 'https://www.tianyeapp.top/static/Tianyeapp_v' + versionName + '.apk',
+      version_code: versionCode,
       update_message: message,
       type: 'android'
     }
@@ -42,6 +78,7 @@ async function addVersion(newVersion, message) {
     } else {
       await Version.create(options)
     }
+    await delFile('./dist/Tianyeapp_v' + oldName + '.apk')
     console.log('已添加版本:' + newVersion)
   } catch (err) {
     console.log('错误:' + err.message)
@@ -51,7 +88,7 @@ async function addVersion(newVersion, message) {
 
 program
   .version('0.1.0')
-  .option('-a, --add-super [email]', 'Add super')
+  .option('-a, --add-super [phone]', 'Add super')
   .option('-v, --add-version [version]', 'Add version')
   .option('-m, --add-version-message [message]', 'Add version message')
   .parse(process.argv)

@@ -1,17 +1,16 @@
-html, body {
-  height: 100%;
-  overflow: hidden;
-}
+$viewWidth: 500px;
+$sampleHeight: 350px;
+
 body {
   font: 12px/1.8 Helvetica,Arial,sans-serif;
   color: #333333;
   background-color: #fafafa;
 }
-body, h1, h2, h3 {
+body, h1, h2, h3, h4 {
   margin: 0;
   padding: 0;
 }
-h1, h2, h3 {
+h1, h2, h3, h4 {
   font-weight: normal;
 }
 button {
@@ -39,11 +38,16 @@ button {
     color: red;
   }
 }
+.pic {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% auto;
+}
 .main {
   text-align: center;
 }
 h1 {
-  width: 100px;
+  width: 180px;
   margin: 20px auto 0;
   height: 44px;
   line-height: 44px;
@@ -63,7 +67,12 @@ h2 {
   height: 32px;
   box-sizing: border-box;
   -moz-box-sizing: border-box;
-  font-size: 14px;
+  font-size: 16px;
+}
+.unsupport-tips {
+  color: #EE3D80;
+  font-size: 16px;
+  margin-top: 10px;
 }
 .qrcode {
   display: inline-block;
@@ -85,26 +94,41 @@ h2 {
   margin-top: 20px;
   font-size: 16px;
 }
+.step {
+  margin-top: 20px;
+  overflow: hidden;
+}
+.feature {
+  font-size: 14px;
+  margin-top: 20px;
+  h3 {
+    padding: 15px 0;
+    font-weight: bold;
+    font-size: 18px;
+  }
+  .desc {
+    text-align: left;
+    color: #666666;
+  }
+}
 .sample {
+  width: 200px;
+  height: $sampleHeight;
+  position: relative;
   background-image: url('/static/images/sample.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  height: calc(100% - 242px);
-  /*!autoprefixer:off*/
-  height: -webkit-calc(100% - 242px);
-  height: -moz-calc(100% - 242px);
-  /*autoprefixer:on*/
-  height: -o-calc(100% - 242px);
   margin-top: 20px;
   box-sizing: border-box;
   -moz-box-sizing: border-box;
+  .pic {
+    width: 76%;
+    height: 100%;
+    margin: 0 auto;
+  }
 }
 .footer {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   text-align: center;
   height: 42px;
   line-height: 42px;
@@ -140,9 +164,12 @@ h2 {
   top: 20%;
   .close {
     color: #ffffff;
-    width: 24px;
-    height: 24px;
+    width: 48px;
+    height: 48px;
+    line-height: 48px;
+    text-align: center;
     .iconfont {
+      line-height: 48px;
       font-size: 24px;
     }
   }
@@ -150,6 +177,9 @@ h2 {
     height: 36px;
     line-height: 36px;
     white-space: nowrap;
+    .iconfont {
+      font-size: 18px;
+    }
   }
 }
 .guide-pop > .modal {
@@ -158,4 +188,39 @@ h2 {
   background-color: #000000;
   opacity: 0.8;
   position: absolute;
+}
+
+@media screen and (max-width: $viewWidth) {
+  .sample, .feature {
+    margin: 0 auto;
+  }
+  .feature {
+    text-align: center;
+    .desc {
+      display: none;
+    }
+  }
+}
+
+@media screen and (min-width: $viewWidth) {
+  .step {
+    width: $viewWidth;
+    margin: 0 auto;
+    &.first, &.third {
+      .feature {
+        float: left;
+      }
+      .sample {
+        float: right;
+      }
+    }
+    &.sceond {
+      .feature {
+        float: right;
+      }
+      .sample {
+        float: left;
+      }
+    }
+  }
 }

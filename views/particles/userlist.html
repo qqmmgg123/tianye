@@ -3,7 +3,7 @@
 <li>
   <%= u.username %>
   <% if (u.isfriend) { %>
-    有缘人
+    知己
   <% } else if (user._id.toString() !== u._id.toString()) { %>
     <button 
     data-id="<%= u._id %>" 

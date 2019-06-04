@@ -6,10 +6,10 @@ let mongoose = require('mongoose')
 , utils = require('../utils')
 
 // 获取作者信息
-User.statics.authorInfoQuery = function() {
+User.statics.authorInfoQuery = function(name = 'creator_id') {
   return { $lookup: {
     from: this.collection.name,
-    let: { 'user_id': '$creator_id' },
+    let: { 'user_id': '$' + name },
     pipeline: [
       { $match: { 
         $expr: { $eq: [ '$_id', '$$user_id' ] }

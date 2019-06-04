@@ -7,7 +7,7 @@ const constant = require('./settings/const')
 
 // This is an example! Use password hashing in your project and avoid storing passwords in your code
 async function verifyPassword(username, password) {
-  const user = await User.findOne({ email: username.trim() }).select('hash salt nickname email')
+  const user = await User.findOne({ phone: username.trim() }).select('hash salt nickname phone')
   if (user) {
     const hashRaw = await utils.pbkdf2(password, user.salt)
     let hash = new Buffer(hashRaw, 'hex')//.toString('hex')
@@ -24,14 +24,14 @@ async function verifyPassword(username, password) {
   }
 }
 
-async function verifyCode(email, code) {
-  email = email.trim()
-  const user = await User.findOne({ email }).select('nickname email')
+async function verifyCode(phone, code) {
+  phone = phone.trim()
+  const user = await User.findOne({ phone }).select('nickname phone')
   if (user) {
     let vcode = await Verification.findOne({ 
-      email: email,
+      phone: phone,
       code: code
-    }, 'email code').lean()
+    }, 'phone code').lean()
   
     if (vcode) {
       return user
@@ -58,7 +58,7 @@ passport.deserializeUser(async function(id, done) {
 
 const LocalStrategy = require('passport-local').Strategy
 passport.use(new LocalStrategy({
-  usernameField: 'email'
+  usernameField: 'phone'
 }, function(username, password, done) {
   verifyPassword(username, password)
     .then(user => {
@@ -69,8 +69,8 @@ passport.use(new LocalStrategy({
 
 const VcodeStrategy = require('./passport-code').Strategy
 passport.use(new VcodeStrategy(
-  function(email, code, done) {
-    verifyCode(email, code)
+  function(phone, code, done) {
+    verifyCode(phone, code)
       .then(user => {
         done(null, user)
       })

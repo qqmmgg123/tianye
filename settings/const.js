@@ -1,11 +1,11 @@
 const constant = {
-  APP_NAME: '田野',
-  APP_SLOGAN: '耕耘内心',
+  APP_NAME: '田野耘心',
+  APP_SLOGAN: '给心灵一点空间。',
   ICP_CODE: '赣ICP备19004410号-1',
 
   // 表单提示语
   DIARY_HOLDER: '记录点滴心语...',
-  TROUBLE_HOLDER: '向有缘人诉说您内心的纠结...',
+  TROUBLE_HOLDER: '向知己诉说您内心的纠结...',
   SHARE_COLUMN_HOLDER: '请选择你创作的书写类型',
   SHARE_HOLDER: '内容...',
   REPLY_HOLDER: '回复',
@@ -13,6 +13,7 @@ const constant = {
   NICKNAME_HOLDER: '称号',
   PASSWORD_HOLDER: '密码',
   EMAIL_HOLDER: '邮箱',
+  PHONE_HOLDER: '手机号',
 
   // 表单错误
   MISS_PARAMS: '缺少参数 :(',
@@ -22,10 +23,12 @@ const constant = {
   USER_NOT_EXISTS: '该用户不存在 :(',
   NICKNAME_REQUIRED: '称号请不要留空 :(',
   NICKNAME_CAN_NOT_EMPTY: '抱歉，请给自己一个的称号',
+  PHONE_REQUIRED: '手机号请不要留空 :(',
+  PHONE_EXISTS: '该手机已经被使用 :(',
   EMAIL_REQUIRED: '邮箱请不要留空 :(',
+  EMAIL_EXISTS: '该邮箱已经被使用 :(',
   MISSING_PASSWORD_ERROR: '密码请不要留空 :(',
   OVER_MAX_SUMMARYLENGTH: '摘要不能超出150个字符',
-  EMAIL_EXISTS: '该邮箱已经被使用 :(',
   USERNAME_MAXLEN_ERROR: '用户名称最多24个字 :(',
   NICKNAME_MAXLEN_ERROR: '称号最多24个字 :(',
   CONTENT_MAXLEN_ERROR: '内容最多30个字 :(',
@@ -56,7 +59,7 @@ const constant = {
 
   NICKNAME_SET_TIPS: '为保护您的个人信息，对外发布内容，请设置一个可以公开的笔名。',
 
-  FRIEND_NAME: '有缘人',
+  FRIEND_NAME: '知己',
   ANONYMOUS_NAME: '匿名',
 
   // 列表分页

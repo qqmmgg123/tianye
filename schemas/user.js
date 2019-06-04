@@ -8,10 +8,10 @@ let userSchema = new Schema({
     trim: true, 
     maxlength: [24, constant.USERNAME_MAXLEN_ERROR]
   },
-  email: { 
+  phone: { 
     type: String, 
     unique: true, 
-    required: [true, constant.EMAIL_REQUIRED],
+    required: [true, constant.PHONE_REQUIRED],
     trim: true
   },
   nickname: { 
@@ -19,6 +19,11 @@ let userSchema = new Schema({
     trim: true, 
     required: [true, constant.NICKNAME_REQUIRED],
     maxlength: [24, constant.NICKNAME_MAXLEN_ERROR]
+  },
+  email: { 
+    type: String, 
+    unique: true, 
+    trim: true
   },
   hash: { type: String, select: false },
   salt: { type: String, select: false },

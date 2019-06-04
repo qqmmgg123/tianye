@@ -12,7 +12,7 @@ function Strategy(options, verify) {
   }
   if (!verify) { throw new TypeError('LocalStrategy requires a verify callback'); }
   
-  this._emailField = options.emailField || 'email';
+  this._phoneField = options.phoneField || 'phone';
   this._codeField = options.codeField || 'code';
   
   passport.Strategy.call(this);
@@ -34,10 +34,10 @@ util.inherits(Strategy, passport.Strategy);
  */
 Strategy.prototype.authenticate = function(req, options) {
   options = options || {};
-  var email = lookup(req.body, this._emailField) || lookup(req.query, this._emailField);
+  var phone = lookup(req.body, this._phoneField) || lookup(req.query, this._phoneField);
   var code = lookup(req.body, this._codeField) || lookup(req.query, this._codeField);
   
-  if (!email || !code) {
+  if (!phone || !code) {
     return this.fail({ message: options.badRequestMessage || 'Missing credentials' }, 400);
   }
   
@@ -51,9 +51,9 @@ Strategy.prototype.authenticate = function(req, options) {
   
   try {
     if (self._passReqToCallback) {
-      this._verify(req, email, code, verified);
+      this._verify(req, phone, code, verified);
     } else {
-      this._verify(email, code, verified);
+      this._verify(phone, code, verified);
     }
   } catch (ex) {
     return self.error(ex);

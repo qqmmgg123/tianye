@@ -30,4 +30,5 @@ let thankSchema = new Schema({
   given_date: { type: Date, default: Date.now }
 })
 
+thankSchema.index({ giver_id: 1, basis_id: 1 }, { unique: true });
 module.exports = thankSchema

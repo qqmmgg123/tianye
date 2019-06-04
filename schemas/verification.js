@@ -2,10 +2,10 @@ const Schema = require('mongoose').Schema
 const constant = require('../settings/const')
 
 let verificationSchema = new Schema({
-  email: { 
+  phone: { 
     type: String, 
     unique: true, 
-    required: [true, constant.EMAIL_REQUIRED],
+    required: [true, constant.PHONE_REQUIRED],
     trim: true
   },
   code: { 

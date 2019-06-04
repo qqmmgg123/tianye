@@ -45,9 +45,6 @@ module.exports = {
     new webpack.optimize.ModuleConcatenationPlugin(),
     new webpack.optimize.OccurrenceOrderPlugin(),
     new HtmlWebpackPlugin({
-      inject: true,
-      chunks: ['index'],
-      hash: true,
       filename: 'index/index.html',
       template: './src/index/index.html'
     }),

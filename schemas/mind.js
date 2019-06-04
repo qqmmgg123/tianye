@@ -34,7 +34,14 @@ let mindSchema = new Schema({
     type: Boolean,
     default: false
   },
+  // 引用id
   ref_id: Schema.Types.ObjectId,
+  // 引用类型
+  ref_type: {
+    type: String,
+    enum: ['mind'],
+    trim: true
+  },
   // 创建者id
   creator_id: { 
     type: Schema.Types.ObjectId,
@@ -78,13 +85,6 @@ let mindSchema = new Schema({
     type: Date, 
     default: Date.now
   },
-})
-
-// 引用
-mindSchema.virtual('quote', {
-  ref: 'Quote',
-  localField: 'ref_id',
-  foreignField: '_id'
 })
 
 mindSchema.pre('save', async function() {

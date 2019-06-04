@@ -1,7 +1,24 @@
 const crypto = require('crypto')
-const semver = require('semver')
+, semver = require('semver')
+, fs = require('fs')
 
 module.exports = {
+  readData: function(path){
+    return new Promise(function(resolve,reject){
+      fs.readFile(path,function(err,data){
+        if(err){
+          reject(err)
+        }else{
+          resolve(data)
+        }
+      })
+    })
+    .then(function(data){
+      return data;
+    },function(err){
+      return err
+    })
+  },
   pbkdf2: function(password, salt) {
     return new Promise((resolve, reject) => {
       const pbkdf2DigestSupport = semver.gte(process.version, '0.12.0');

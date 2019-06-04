@@ -38,7 +38,7 @@
         <li>
           <div class="info">
             <div class="info-user"><%= friend.remark || friend.recipient_name %></div>
-            <div class="info-state">申请加您为有缘人?</div>
+            <div class="info-state">申请加您为知己?</div>
             <div class="info-message"><%= friend.content %></div>
           </div>
           <div class="ctrl">
@@ -71,7 +71,7 @@
           </div>
       <% } else if (friend.status === 3 && friend.recipient_status === 0) { %>
         <li>
-          <div><%= friend.remark || friend.recipient_name %>将你移出了有缘人...</div>
+          <div><%= friend.remark || friend.recipient_name %>将你移出了知己...</div>
           <div><%= friend.recipient_conetnt %></div>
           <div>             
             <button

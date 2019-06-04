@@ -9,8 +9,8 @@ const createTimeStamp = function () {
 
 module.exports = {
   grant_type: 'client_credential',
-  appid: 'xxxxxxxxxxxxxxx',
-  secret: 'xxxxxxxxxxxxxxxxxxxxxxxxxx',
+  appid: 'wx6a2ad0b24115e40c',
+  secret: '3f3dc7187ef147f157a986059137f81e',// '7b7d0b8714232b1f94562eb955fc7d39',// 'e49ac0690b959a6307b317fa04672f40',
   noncestr: createNonceStr(),
   accessTokenUrl:'https://api.weixin.qq.com/cgi-bin/token',
   ticketUrl: 'https://api.weixin.qq.com/cgi-bin/ticket/getticket',
