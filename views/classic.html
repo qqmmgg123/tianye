@@ -1,6 +1,5 @@
 <%- include(tempRoot + 'particles/crumbs.html') %>
 <% if (user && (user.administrator || user.super)) { %>
-<a href="/classic/<%= classic._id %>/section/create" class="button">添加章节</a>
 <% } %>
 <div class="content">
   <h3><%= classic.title || '' %></h3>
