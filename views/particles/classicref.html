@@ -1,7 +1,26 @@
 <blockquote>
-  <!--<img src="<%= classic.poster || '' %>" />-->
-  <h3>
-    <a href="/classic/<%= classic._id %>"><%= classic.title || '' %></a>
-  </h3>
-  <p><%= classic.summary || '' %></p>
+  <% if (mind.title) { %>
+  <a href="/mind/<%= mind._id %>" class="title">
+    <%= mind.title || '' %>
+  </a>
+  <% } %>
+  <% if (mind.title || mind.quote) { %>
+  <p class="summary minor">
+    <%= mind.summary || '' %>
+  </p>
+  <% } else { %>
+  <p class="summary">
+    <%= mind.summary || '' %>
+  </p>
+  <% } %>
+  <% if (mind.quote) { %>
+  <a class="quote-bg" href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>">
+    <div class="pic" style="background-image: url('<%= mind.quote.poster || '' %>?imageMogr2/auto-orient|imageMogr2/quality/90!/thumbnail/180x220');"></div>
+    <div class="text">
+      <% if (mind.quote.title) { %>
+      <div class="quote-title"><%= mind.quote.title || '' %></div>
+      <% } %>
+    </div>
+  </a>
+  <% } %>
 </blockquote>

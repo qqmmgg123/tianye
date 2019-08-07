@@ -1,8 +1,9 @@
 @import 'common.scss';
 .content {
-  h3 {
-    font-size: 20px;
+  h1 {
+    font-size: 24px;
     text-align: center;
+    font-weight: 500;
   }
   blockquote {
     margin-top: 10px;
@@ -30,5 +31,17 @@
   .content-viewer {
     font-size: 16px;
     margin-top: 10px;
+  }
+}
+
+#sections.list {
+  padding: 0;
+  .item > a {
+    font-size: 16px;
+    line-height: 24px;
+    padding: 10px 0;
+    display: block;
+    color: #333333;
+    font-weight: 500;
   }
 }

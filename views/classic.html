@@ -1,19 +1,51 @@
-<%- include(tempRoot + 'particles/crumbs.html') %>
-<% if (user && (user.administrator || user.super)) { %>
+
+<% if (user) { %>
+<div class="content-header">
+  <div class="button-area">
+    <a href="/classic/<%= classic._id %>/modify" class="button">编辑</a>
+    <a 
+      href="javascript:;" 
+      class="button"
+      rel-ctl="classic-remove"
+      data-id="<%= classic._id %>" 
+    >删除</a>
+    <a href="/classic/<%= classic._id %>/section/create" class="button">添加章节</a>
+  </div>
+</div>
+<hr>
 <% } %>
 <div class="content">
-  <h3><%= classic.title || '' %></h3>
+  <h1><%= classic.title || '' %></h1>
   <blockquote>
-    <%= classic.summary || '' %>
+    <%= classic.mind && (classic.mind.content || (classic.mind[0] && classic.mind[0].content)) || '' %>
   </blockquote>
   <div class="content-viewer">
     <%- classic.content || '' %>
   </div>
   <% if (sections && sections.length) { %>
-  <ol>
+  <ol id="sections" class="list">
     <% sections.forEach((section) => { %>
-    <li><a href="/section/<%= section._id %>"><%= section.title || '' %></a></li>
+    <li class="item fade">
+      <a href="/section/<%= section._id %>"><%= section.title || '' %></a>
+      <div class="bottom-bar">
+        <% if (user && user._id) { %>
+          <% if (section.creator_id.toString() === user._id.toString()) { %>
+            <a href="/section/<%= section._id %>/modify">
+              编辑
+            </a>
+            <a 
+            rel-ctl="section-remove"
+            data-hiding="false" 
+            data-id="<%= section._id %>" 
+            href="javascript:;">
+              删除
+            </a>
+          <% } %>
+        <% } %>
+      </div>
+    </li>
     <% }) %>
+    <%- include('particles/pagination.html') %>
   </ol>
   <% } %>
 </div>

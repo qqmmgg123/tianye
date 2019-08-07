@@ -1,24 +1,28 @@
-<%- include(tempRoot + 'particles/classiceditor.html') %>
+<div class="content-header">
+  <div class="button-area">
+    <% if (user) { %>
+    <a href="/mind/create" class="button">分享感悟</a>
+    <a href="/classic/create" class="button">推荐作品</a>
+    <% } else { %>
+    <a href="/login" class="button">分享感悟</a>
+    <a href="/login" class="button">推荐作品</a>
+    <% } %>
+  </div>
+</div>
+<hr>
+<div class="tags">
+  <a href="/">全部</a>
+  <a href="?tag=works">作品</a>
+  <a href="?tag=article">文章</a>
+  <a href="?tag=other">句子</a>
+</div>
+<hr>
 <ol id="classics" class="list">
-  <% if (classics && classics.length) { %>
-  <% classics.forEach((classic) => { %>
+  <% if (minds && minds.length) { %>
+  <% minds.forEach((mind) => { %>
   <li class="item fade">
-    <%- include(tempRoot + 'particles/classicref.html', { classic }) %>
+    <%- include(tempRoot + 'particles/classicref.html', { mind }) %>
     <div class="bottom-bar">
-      <% if (user && user._id) { %>
-        <% if (classic.creator_id.toString() === user._id.toString()) { %>
-          <a href="/classic/<%= classic._id %>/modify">
-            编辑
-          </a>
-          <a 
-          rel-ctl="classic-remove"
-          data-hiding="false" 
-          data-id="<%= classic._id %>" 
-          href="javascript:;">
-            删除
-          </a>
-        <% } %>
-      <% } %>
     </div>
     <hr />
   </li>

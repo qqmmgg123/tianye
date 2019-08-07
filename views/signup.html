@@ -1,33 +1,36 @@
-<form action="/signup" method="post">
+<form action="/signup" method="post" autocomplete="off">
   <p class="server-info"><%= info %></p>
+  <input type="password" style="display: none;"/>
   <p class="form-group">
     <label>
-      <input placeholder="<%= usernameHolder %>" name="username" value="<%= username %>" autocomplete="off" />
+      <input placeholder="<%= nicknameHolder %>" type="text" name="nickname" value="<%= nickname %>" autocomplete="off" />
     </label>
   </p>
   <p class="form-group">
     <label>
-      <input placeholder="<%= passwordHolder %>" type="password" name="password" value="<%= password %>" autocomplete="off" />
+      <input id="password" placeholder="<%= passwordHolder %>" type="password" name="password" value="<%= password %>" autocomplete="new-password" style="background-color: #FFFFFF!important;" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly',true);" />
     </label>
   </p>
   <p class="form-group">
     <label>
-      <input placeholder="<%= emailHolder %>" type="email" name="email" value="<%= email %>" autocomplete="off" />
+      <input placeholder="<%= phoneHolder %>" type="phone" name="phone" value="<%= phone %>" autocomplete="off" />
     </label>
   </p>
   <div class="form-group">
-    <div  class="vcode-info"></div>
+    <div class="vcode-info" style="display: none;"></div>
     <div class="code">
       <label>
-        <input type="text" name="code" placeholder="请输入验证码 ..." value="<%= code %>" id="code" />
+        <input type="text" name="code" placeholder="请输入验证码 ..." value="<%= code %>" id="code" autocomplete="off" />
       </label>
       <label>
-        <button rel-ctl="sendCode">发送验证码</button>
+        <button type="button" rel-ctl="sendCode" disabled>发送验证码</button>
       </label>
     </div>
   </div>
   <p class="form-group">
-    <button type="submit">注册</button>
-    <a href="/login">已有账号，登录</a>
+    <button type="submit" disabled>注册</button>
+  </p>
+  <p class="form-group">
+    <a class="link" href="/login">已有账号，登录</a>
   </p>
 </form>

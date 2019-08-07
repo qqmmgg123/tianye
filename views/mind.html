@@ -6,9 +6,12 @@
   <% } else if (mind.type_id === 'help') { %>
   <h2>—— 烦恼 ——</h2>
   <% } %>
-  <div class="content-viewer"><%= mind.content || '' %><a class="download-btn button" href="/">下载田野APP，结交知心朋友 -></a></div>
+  <div class="content-viewer">
+    <%= mind.content || '' %>
+    <!--<a class="download-btn button" href="/">下载田野APP，结交知心朋友 -></a>-->
+  </div>
 </div>
-<div class="ctrl-bar">
+<!--<div class="ctrl-bar">
   <a href="/">
     <div>
       <i class="iconfont icon-xin"></i>
@@ -31,7 +34,7 @@
       <div>举报</div>
     </div>
   </a>
-</div>
+</div>-->
 <% } else { %>
   <div class="content">
     <h1>: ( 您访问的内容不存在~</h1>

@@ -1,13 +1,18 @@
 const constant = {
   APP_NAME: '田野耘心',
-  APP_SLOGAN: '给心灵一点空间。',
+  APP_SLOGAN: '给心灵一点空间',
   ICP_CODE: '赣ICP备19004410号-1',
+  SITE_KEWWORDS: '田野耘心,内心,修行,禅',
+
+  // 页面title
+  SITE_SIGNIN_PAGE: '登录',
+  SITE_SIGNUP_PAGE: '注册',
 
   // 表单提示语
   DIARY_HOLDER: '记录点滴心语...',
-  TROUBLE_HOLDER: '向知己诉说您内心的纠结...',
+  HELP_HOLDER: '向知己诉说您内心的纠结...',
   SHARE_COLUMN_HOLDER: '请选择你创作的书写类型',
-  SHARE_HOLDER: '内容...',
+  SHARE_HOLDER: '分享感悟，忠告，或抚慰心灵的鸡汤。',
   REPLY_HOLDER: '回复',
   USERNAME_HOLDER: '用户名',
   NICKNAME_HOLDER: '称号',
@@ -118,7 +123,7 @@ const constant = {
 
   // 默认图片
   DEFAULT_IMAGE: 'https://tianyeapp.top/static/images/logo_tianye.png',
-  SUMMARY_LIMIT: 50,
+  SUMMARY_LIMIT: 150,
 }
 
 // 输出模块

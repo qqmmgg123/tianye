@@ -1,6 +1,6 @@
 @import 'common.scss';
 .content {
-  h3 {
+  h1 {
     font-size: 20px;
     text-align: center;
   }
@@ -8,5 +8,18 @@
   .content-viewer {
     font-size: 16px;
     margin-top: 10px;
+    .pagination {
+      margin-top: 20px;
+      overflow: hidden;
+      .page-num {
+        margin-left: 0;
+      }
+      .prev-section {
+        float: left;
+      }
+      .next-section {
+        float: right;
+      }
+    }
   }
 }

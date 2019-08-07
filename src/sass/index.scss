@@ -1,76 +1,21 @@
-$viewWidth: 500px;
+@import 'common.scss';
+
 $sampleHeight: 350px;
 
-body {
-  font: 12px/1.8 Helvetica,Arial,sans-serif;
-  color: #333333;
-  background-color: #fafafa;
-}
-body, h1, h2, h3, h4 {
-  margin: 0;
-  padding: 0;
-}
 h1, h2, h3, h4 {
   font-weight: normal;
 }
-button {
-  border: 1px solid #dddddd;
-  outline: none;
-  background: white;
-  color: #666666;
-  vertical-align: middle;
-  line-height: 22px;
-  padding: 0 20px;
-  height: 44px;
-  border-radius: 3px;
-  cursor: pointer;
-  &[disabled] {
-    color: #999999;
-    background-color: #f0f0f0;
-    border: 1px solid #eaeaea;
-  }
-  &:hover {
-    border-color: orange;
-    color: orange;
-  }
-  &:active {
-    border-color: red;
-    color: red;
-  }
-}
-.pic {
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% auto;
-}
-.main {
-  text-align: center;
-}
-h1 {
-  width: 180px;
-  margin: 20px auto 0;
-  height: 44px;
-  line-height: 44px;
-  box-sizing: border-box;
-  font-size: 24px;
-  > svg {
-    float: left;
-  }
-  > strong {
-    margin-left: 20px;
-    margin-bottom: 10px;
-    font-weight: normal;
-  }
-}
 h2 {
-  margin-top: 20px;
   height: 32px;
   box-sizing: border-box;
   -moz-box-sizing: border-box;
-  font-size: 16px;
+  font-size: 24px;
+}
+header {
+  border-bottom: none;
 }
 .unsupport-tips {
-  color: #EE3D80;
+  color: $cherryRed;
   font-size: 16px;
   margin-top: 10px;
 }
@@ -93,10 +38,22 @@ h2 {
 .qrcode .ios button {
   margin-top: 20px;
   font-size: 16px;
+  line-height: 24px;
+  padding: 10px 20px;
+  border-color: $cherryRed;
+  color: $cherryRed;
+}
+.banner {
+  .inner {
+    padding: 20px 0;
+  }
 }
 .step {
-  margin-top: 20px;
+  padding: 20px 0;
   overflow: hidden;
+  &.first, &.third {
+    background-color: #fafafa;
+  }
 }
 .feature {
   font-size: 14px;
@@ -126,15 +83,8 @@ h2 {
     width: 76%;
     height: 100%;
     margin: 0 auto;
+    background-size: 100% auto;
   }
-}
-.footer {
-  text-align: center;
-  height: 42px;
-  line-height: 42px;
-  padding: 0 10px;
-  font-size: 12px;
-  color: #666666;
 }
 .guide-pop {
   position: fixed;
@@ -191,6 +141,16 @@ h2 {
 }
 
 @media screen and (max-width: $viewWidth) {
+  .banner {
+    .inner {
+      text-align: center;
+      .download-area {
+        button {
+          margin-top: 30px;
+        }
+      }
+    }
+  }
   .sample, .feature {
     margin: 0 auto;
   }
@@ -203,9 +163,26 @@ h2 {
 }
 
 @media screen and (min-width: $viewWidth) {
+  .banner {
+    .inner {
+      text-align: right;
+      background-image: url('/static/images/banner.png');
+      background-position: left center;
+      background-repeat: no-repeat;
+      width: $viewWidth;
+      margin: 0 auto;
+      height: 200px;
+      .download-area {
+        margin-top: 42px;
+        margin-right: 20px;
+      }
+    }
+  }
   .step {
-    width: $viewWidth;
-    margin: 0 auto;
+    .inner {
+      width: $viewWidth;
+      margin: 0 auto;
+    }
     &.first, &.third {
       .feature {
         float: left;

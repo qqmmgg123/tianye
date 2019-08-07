@@ -4,16 +4,23 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
   <meta name="renderer" content="webkit">
-  <meta name="description" content="<%= slogan %>">
+  <% if (typeof description !== 'undefined') { %>
+  <meta name="description" content="<%= description %>">
+  <% } %>
+  <% if (typeof keywords !== 'undefined') { %>
+  <meta name="keywords" content="<%= keywords %>">
+  <% } %>
   <!-- mobile -->
   <!-- UC强制全屏 -->
   <meta name="full-screen" content="yes">
   <!-- QQ强制全屏 -->
   <meta name="x5-fullscreen" content="true">
   <title><%= title %></title>
-  <link href="//at.alicdn.com/t/font_1197366_yi56zp8hja.css" rel="stylesheet">
+  <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
+  <link href="//at.alicdn.com/t/font_942830_4fh1z9sle27.css" rel="stylesheet">
   <link href="<%= globalStyleFile %>?v=201905030333" rel="stylesheet">
   <link href="<%= pageStyleFile %>?v=201905030333" rel="stylesheet">
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <% if (need_dom4_script) { %>
   <script src="//cdnjs.cloudflare.com/ajax/libs/dom4/2.0.0/dom4.js">/* DOM4 */</script>
   <% } %>

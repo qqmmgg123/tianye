@@ -1,72 +1,112 @@
 import '@babel/polyfill'
 import { post } from './lib/request'
 
-globalData.codeBtnDis = false
+// 私有属性 privacy
+const _tips = function(type) {
+  return document.querySelector(`.${type}-info`)
+}
+, signupForm = document.querySelector('form')
+, inputs = [...signupForm.querySelectorAll('[name]')]
+, names = inputs.map(input => input.getAttribute('name'))
+, submitBtn = signupForm.querySelector('button[type=submit]')
+, codeBtn = signupForm.querySelector('[rel-ctl="sendCode"]')
 
-// 事件触发
-document.body.addEventListener('input', (e) => {
-  let el = e.target
-  if (el.matches('input[name="username"]')) {
-    globalData.username = el.value
-  } else if (el.matches('input[name="password"]')) {
-    globalData.password = el.value
-  } else if (el.matches('input[name="email"]')) {
-    globalData.email = el.value
-  } else if (el.matches('input[name="code"]')) {
-    globalData.code = el.value
+// 公共属性 public
+, CHERRY_RED = '#EE3D80'
+
+// 输入事件触发
+signupForm.oninput = (e) => {
+  e = window.event || e
+  let el = e.srcElement || e.target
+  let name = el.getAttribute('name')
+  if (names.indexOf(name) !== -1) {
+    globalData[name] = el.value
+    if (name === 'phone') {
+      checkPhoneInput()
+    }
+    checkInput()
   }
-}, false)
+}
 
+// 点击时间触发
 document.body.addEventListener('click', async (e) => {
-  let el = e.target
+  e = window.event || e
+  let el = e.srcElement || e.target
+  // 发送验证码点击
   if (el.matches('[rel-ctl="sendCode"]')) {
-    if (globalData.codeBtnDis) return
-
-    console.log('发送验证码点击...')
-    e.preventDefault()
-    let { email } = globalData
-    let res = await post('/email/vcode', {
-      email
+    preventDefault(e)
+    if (el.disabled) return
+    info('vcode', '正在发送验证码...')
+    sendCountDown(el)
+    let { phone } = globalData
+    let res = await post('/phone/vcode', {
+      type: 'signup',
+      phone
     })
     if (res.success) {
-      let time = 30
-      let timer = null
-      el.innerHTML = `<span>30</span>秒后重发`
-      document.querySelector('.vcode-info').innerHTML = '验证码发送成功，有效时间10分钟'
-      document.querySelector('.vcode-info').style.display = ''
-      globalData.codeBtnDis = true
-      el.disabled = true
-      timer = setInterval(() => {
-        if (time >= 0) {
-          el.querySelector('span').innerHTML = time--
-        } else {
-          el.innerHTML = '重新发送'
-          globalData.codeBtnDis = false
-          el.disabled = false
-          clearInterval(timer)
-          timer = null
-        }
-      }, 1000)
+      info('vcode', '验证码发送成功，有效时间10分钟', 2000)
     } else {
       globalData.info = res.info
-      document.querySelector('.server-info').innerHTML = res.info
-    }
-  } else if (el.matches('button[type=submit]')) {
-    e.preventDefault()
-    let res = await post('/signup', {
-      username: globalData.username,
-      password: globalData.password,
-      email: globalData.email,
-      code: globalData.code
-    })
-    if (res.success) {
-      const { redirectUrl = '' } = res
-      if (redirectUrl) {
-        window.location.replace(redirectUrl)
-      }
-    } else {
-      globalData.info = res.info
-      document.querySelector('.server-info').innerHTML = res.info
+      error('server', res.info)
     }
   }
 }, false)
+
+// 当前模块函数 privacy
+function info(type, message, delay) {
+  let infoTips = _tips(type)
+  infoTips.style.color = '#666666'
+  infoTips.innerHTML = message
+  infoTips.style.display = ''
+  if (delay) {
+    let timer = setInterval(() => {
+      infoTips.style.display = 'none'
+    }, delay)
+  }
+}
+
+function error(type, message) {
+  let infoTips = _tips(type)
+  infoTips.style.color = CHERRY_RED
+  infoTips.innerHTML = message
+  infoTips.style.display = ''
+}
+
+function checkInput() {
+  let isEveryNoEmpty = names.every(name => globalData[name] && globalData[name].trim())
+  if (isEveryNoEmpty) submitBtn.disabled = false
+  else submitBtn.disabled = true
+}
+
+function checkPhoneInput() {
+  let { phone } = globalData
+  if (phone && phone.trim()) codeBtn.disabled = false
+  else codeBtn.disabled = true
+}
+
+// 验证码按钮倒计时
+function sendCountDown(btn) {
+  let time = 30
+  , timer = null
+  btn.innerHTML = '<span>30</span>秒后重发'
+  btn.disabled = true
+  timer = setInterval(() => {
+    if (time >= 0) {
+      btn.querySelector('span').innerHTML = time--
+    } else {
+      btn.innerHTML = '重新发送'
+      btn.disabled = false
+      clearInterval(timer)
+      timer = null
+    }
+  }, 1000)
+}
+
+// 公共函数 public
+function preventDefault(e) {
+  if (e.preventDefault) {
+    e.preventDefault()
+  } else {
+    e.returnValue = false
+  }
+}

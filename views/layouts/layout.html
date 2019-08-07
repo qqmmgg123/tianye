@@ -3,12 +3,20 @@
   <%- include(tempRoot + 'particles/head.html') %>
 <body>
   <%- include(tempRoot + 'particles/header.html') %>
+  <% if (particles === 'index.html') { %>
+  <%- include(tempRoot + particles) %>
+  <% } else { %>
   <div class="main">
     <div class="view-area">
       <%- include(tempRoot + particles) %>
     </div>
   </div>
+  <% } %>
+  <%- include(tempRoot + 'particles/footer.html') %>
   <script>
+    /* window.onerror = function(message, source, lineno, colno, error) {
+      _hmt && _hmt.push(['_trackEvent', 'website', 'error', message]);
+    } */
     var globalDataStr='<%= globalData %>';
   </script>
   <% if (need_global_script) { %>

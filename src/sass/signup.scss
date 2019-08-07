@@ -1,4 +1,11 @@
 @import 'common.scss';
+button {
+  line-height: 22px;
+  &[type=submit] {
+    width: 100%
+  }
+}
+
 form {
   margin: auto;
   max-width: 360px;
@@ -15,22 +22,36 @@ form {
 
 .form-group {
   margin-bottom: 10px;
-  .code {
-    display: flex;
-    label {
-      display: block;
-      flex: 1;
-      &:last-child {
-        margin-left: 5px;
-      }
-    }
-    button {
-      box-sizing: border-box;
-    }
-  }
   input {
     width: 100%;
     max-width: 360px;
     box-sizing: border-box;
+  }
+  .link {
+    width: 100%;
+    line-height: 22px;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    display: block;
+  }
+
+  .code {
+    overflow: hidden;
+    label {
+      float: left;
+      width: 50%;
+      &:last-child {
+        button {
+          margin-left: 10px;
+          width: calc(100% - 10px);
+          /*!autoprefixer:off*/
+          width: -webkit-calc(100% - 10px);
+          width: -moz-calc(100% - 10px);
+          /*autoprefixer:on*/
+          width: -o-calc(100% - 10px);
+        }
+      }
+    }
   }
 }

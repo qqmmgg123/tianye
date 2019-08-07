@@ -5,13 +5,46 @@ const constant = require('../settings/const')
 
 
 Mind.statics.extract = function(content) {
-  // let str  = this.content.replace(/(\r\n|\n|\r)/gm, '')
-  // .replace(/\s+/g, '').replace(/[^\x20-\x7E]/gmi, '')
   return content.slice(0, constant.SUMMARY_LIMIT - 3) + '...'
 }
 
 // 查询引用
 Mind.statics.quoteQuery = function(uid) {
+  return [
+    { $lookup: {
+      from: 'minds',
+      let: { 
+        'mind_id': '$ref_id',  
+        'type': '$ref_type'
+      },
+      pipeline: getCond(uid, 'mind'),
+      as: 'quote_mind'
+    }},
+    { $lookup: {
+      from: 'classics',
+      let: { 
+        'mind_id': '$ref_id',  
+        'type': '$ref_type'
+      },
+      pipeline: getCond(uid, 'classic'),
+      as: 'quote_classic'
+    }},
+  ]
+}
+
+// 创建和更新前处理
+Mind.pre('save', function(next, done) {
+  if (this.column_id === 'literature' && !this.title) {
+    throw new Error(constant.TITLE_REQUIRED)
+  }
+  this.is_extract = this.content.length > constant.SUMMARY_LIMIT - 3
+  this.summary = this.is_extract
+    ? this.constructor.extract(this.content)
+    : this.content
+  next()
+})
+
+function getCond(uid, type) {
   let condition = [
     { $match: { 
       $expr: {
@@ -25,8 +58,11 @@ Mind.statics.quoteQuery = function(uid) {
     summary: 1,
     type: '$$type',
     url: '$_id',
-    perm_id: 1
+    perm_id: 1,
+    poster: 1
   }}
+
+  if (type !== 'mind') return [...condition, project]
 
   if (uid) {
     condition.push(
@@ -63,28 +99,7 @@ Mind.statics.quoteQuery = function(uid) {
     })})
   }
 
-  return [
-    { $lookup: {
-      from: this.collection.name,
-      let: { 
-        'mind_id': '$ref_id',  
-        'type': '$ref_type'
-      },
-      pipeline: condition,
-      as: 'quote'
-    }}
-  ]
+  return condition
 }
-
-Mind.pre('save', function (next, done) {
-  if (this.column_id === 'literature' && !this.title) {
-    throw new Error(constant.TITLE_REQUIRED)
-  }
-  this.is_extract = this.content.length > constant.SUMMARY_LIMIT - 3
-  this.summary = this.is_extract
-    ? this.constructor.extract(this.content)
-    : this.content 
-  next()
-})
 
 module.exports = mongoose.model('Mind', Mind)

@@ -1,8 +1,8 @@
 <form action="/login" method="post">
-  <p><%= info %></p>
+  <p class="server-info"><%= info %></p>
   <p class="form-group">
     <label>
-      <input placeholder="<%= usernameHolder %>" name="username" autocomplete="off" />
+      <input placeholder="<%= phoneHolder %>" name="phone" autocomplete="off" />
     </label>
   </p>
   <p class="form-group">
@@ -10,11 +10,11 @@
       <input placeholder="<%= passwordHolder %>" type="password" name="password" autocomplete="off" />
     </label>
   </p>
+  <input type="hidden" name="way" value="local">
   <p class="form-group">
     <button type="submit">登录</button>
-    <a href="/signup">没有账号，去注册~</a>
   </p>
-  <!--<p class="form-group">
-    <a href="/auth/qq">使用QQ登录</a>
-  </p>-->
+  <p class="form-group">
+    <a class="link" href="/signup">没有账号，去注册~</a>
+  </p>
 </form>

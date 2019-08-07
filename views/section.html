@@ -1,12 +1,20 @@
-<%- include(tempRoot + 'particles/crumbs.html') %>
-<% if (user && (user.administrator || user.super)) { %>
-<a href="/section/<%= section._id %>/modify" class="button">编辑</a>
-<a href="/section/<%= section._id %>/translate/create" class="button">翻译</a>
+<% if (user) { %>
+<%- include(tempRoot + 'particles/crumbs.html', { right_btn: true, redirect: '/section/' + section._id + '/modify' }) %>
 <% } %>
-<a href="/section/<%= section._id %>/translates" class="button">查看译文</a>
 <div class="content">
-  <h3><%= section.title || '' %></h3>
+  <h1><%= section.title || '' %></h1>
   <div class="content-viewer">
     <%- section.content || '' %>
+    <% if (prevSection || nextSection) { %>
+    <div class="pagination">
+      <% if (prevSection) { %>
+      <a href="/section/<%= prevSection._id %>" class="prev-section page-num">上一篇</a>
+      <% } %>
+      <% if (nextSection) { %>
+      <a href="/section/<%= nextSection._id %>" class="next-section page-num">下一篇</a>
+      <% } %>
+    </div>
+    <% } %>
+    </div>
   </div>
 </div>

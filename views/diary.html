@@ -1,36 +1,27 @@
-<%- include(tempRoot + 'particles/features.html') %>
-<div class="editor">
-  <form method="post" action="/diary">
-    <textarea name="content" placeholder="<%= diaryHolder %>" rows="6" autofocus></textarea>
-    <div class="bottom-bar">
-      <div class="info-tips"><%= info || '' %></div>
-      <div class="allowed">
-        <div class="tips">
-          <span>仅自己可见</span>
-          <i class="iconfont icon-suoding"></i>
-        </div>
-      </div>
-      <button type="submit">记录</button>
-    </div>
-  </form>
-</div>
 <ol id="diarys" class="list">
-  <% if (diarys && diarys.length) { %>
-  <% diarys.forEach((diary) => { %>
+  <% if (minds && minds.length) { %>
+  <% minds.forEach((mind) => { %>
   <li class="item fade">
-    <blockquote>
-      <h3><%= diary.content || '' %></h3>
-      <em><%= dateFormat(diary.created_date) %></em>
-    </blockquote>
+    <%- include(tempRoot + 'particles/classicref.html', { mind }) %>
     <div class="bottom-bar">
-      <% if (user && user.id && diary.creator_id.equals(user.id)) { %>
-      <a 
-      rel-ctl="diary-remove"
-      data-hiding="false"
-      data-id="<%= diary._id %>" 
-      href="javascript:;">
-        删除
-      </a>
+      <span class="datetime"><%= dateFormat(mind.created_date) %></span>
+      <% if (user && user.id && mind.creator_id.equals(user.id)) { %>
+      <div class="right-ctrl">
+        <a 
+        rel-ctl="diary-remove"
+        data-hiding="false"
+        data-id="<%= mind._id %>" 
+        href="javascript:;">
+          编辑
+        </a>
+        <a 
+        rel-ctl="diary-remove"
+        data-hiding="false"
+        data-id="<%= mind._id %>" 
+        href="javascript:;">
+          删除
+        </a>
+      </div>
       <% } %>
     </div>
     <hr />

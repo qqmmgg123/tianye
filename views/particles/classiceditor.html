@@ -1,22 +1,33 @@
-<% if (user && (user.administrator || user.super)) { %>
+<% if (user) { %>
 <div class="editor">
+  <input style="display: none;" type="file" v-bind:accept="allowTypes" v-on:change="fileChange" ref="fileInput">
   <% if (classic && classic._id) { %>
     <form id="classicForm" method="put"  action="/classic/<%= classic._id %>">
   <% } else { %>
+    <div class="tips">
+      ! 请推荐对他人心灵有帮助的书籍。
+    </div>
     <form id="classicForm" method="post" action="/classic">
   <% } %>
     <div class="form-group">
-      <input name="title" placeholder="标题" value="<%= classic && classic.title || '' %>" />
+      <textarea name="summary" placeholder="推荐理由（<%= shareHolder %>）"><%= classic && classic.mind && (classic.mind.content || (classic.mind[0] && classic.mind[0].content)) || '' %></textarea>
     </div>
     <div class="form-group">
-      <textarea name="summary" placeholder="摘要"><%= classic && classic.summary || '' %></textarea>
+      <input name="title" placeholder="作品标题" value="<%= classic && classic.title || '' %>" />
+    </div>
+    <div class="form-group">
+      <div class="file-upload">
+        <a class="button" href="javascript:;">上传封面</a>
+        <div style="display: none;" class="progress">上传进度：<span>0%</span></div>
+      </div>
+      <input type="hidden" name="poster" value="<%= classic && classic.poster || '' %>" />
     </div>
     <div class="form-group">
       <div id="editor" class="pell"></div>
       <textarea style="display: none;" id="html-output" name="content" rows="6" autofocus><%- classic && classic.content || '' %></textarea>
     </div>
     <div class="bottom-bar">
-      <button type="submit">
+      <button type="submit" disabled>
       <% if (classic && classic.title) { %>
         更新
       <% } else { %>

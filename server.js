@@ -33,7 +33,9 @@ const path = require('path')
 const { staticDir } = require('./config/remotepath')
 const phoneToken = require('generate-sms-verification-code')
 const utils = require('./utils')
-const signature = require('./signature');
+const signature = require('./signature')
+const qiniu = require('qiniu')
+const formidable = require('formidable')
 
 const Core = require('@alicloud/pop-core');
 
@@ -140,6 +142,7 @@ router.get([
   '/help/:id',
   '/recommend/helps',
   '/mind/:id/modify',
+  '/classic/create',
   '/classic/:id/modify',
   '/classic/:id/section/create',
   '/section/:id/modify',
@@ -172,6 +175,7 @@ router.use([
   '/friend/:id/remove',
   '/nickname',
   '/password',
+  '/uploadImg',
 ], (ctx, next) => {
   let { method } = ctx.request
   if ([
@@ -228,26 +232,15 @@ router.get([
   ctx.body = data
 })
 
-// 首页
-router.get('/', (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: constant.APP_NAME,
-  })
-
-  return ctx.render('index', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN
-  })
-})
-
 // 登录页
 router.get('/login', async (ctx) => {
   ctx.session.currentFormUrl = '/login'
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
-      constant.APP_SIGNIN_PAGE
-    ].join('——')
+      constant.SITE_SIGNIN_PAGE
+    ].join('——'),
+    is_wechat: false
   })
 
   const info = ctx.session.info
@@ -359,8 +352,9 @@ router.get('/signup', async (ctx) => {
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
-      constant.APP_SIGNIN_PAGE
-    ].join('——')
+      constant.SITE_SIGNUP_PAGE
+    ].join('——'),
+    is_wechat: false
   })
 
   await ctx.fullRender('signup', {
@@ -398,9 +392,14 @@ router.post('/signup', async (ctx, next) => {
   }, 'phone code').lean()
 
   if (!vcode) {
-    ctx.body = {
-      success: false,
-      info: constant.VCODE_ERROR
+    if (ctx.state.isXhr) {
+      ctx.body = {
+        success: false,
+        info: constant.VCODE_ERROR
+      }
+    } else {
+      ctx.session.info = constant.VCODE_ERROR
+      ctx.redirect('/signup')
     }
     return
   }
@@ -411,9 +410,14 @@ router.post('/signup', async (ctx, next) => {
 
   if (user) {
     let errmsg = constant.PHONE_EXISTS
-    ctx.body = {
-      success: false,
-      info: errmsg
+    if (ctx.state.isXhr) {
+      ctx.body = {
+        success: false,
+        info: errmsg
+      }
+    } else {
+      ctx.session.info = errmsg
+      ctx.redirect('/signup')
     }
   } else {
     let buf = await crypto.randomBytes(32)
@@ -540,7 +544,7 @@ router.post('/phone/vcode',async (ctx)=>{
       method: 'POST'
     };
     
-    let result = await client.request('SendSms', params, requestOption)
+    await client.request('SendSms', params, requestOption)
     ctx.body = {
       success: true
     }
@@ -554,16 +558,99 @@ router.post('/phone/vcode',async (ctx)=>{
 
 // 记录当前页面url状态
 router.get([
+  '/',
+  '/appdownload',
   '/mind/:id',
   '/karma/fate',
   '/karma/talk',
-  '/classic',
   '/help/:id',
   '/classic/:id',
   '/karma/friend',
 ], (ctx, next) => {
   ctx.session.currentUrl = ctx.url
   return next()
+})
+
+// 首页
+// 引经据典
+router.get('/classic', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      '网友推荐'
+    ].join('——'),
+    is_wechat: false,
+  })
+
+  // 分页
+  let { query } = ctx.request
+  let range = +query.range || constant.PAGE_RANGE
+  let page = +query.page || 1
+  let limit = +query.perPage || constant.LIST_LIMIT
+  let skip = (page - 1) * limit
+  let index = range / 2
+  let lastIndex = range - index
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 著作总数
+  let total = await Classic.estimatedDocumentCount()
+  let totalPage = Math.ceil(total / limit)
+  let pageInfo = null
+
+  const nextPage = page < totalPage ? page + 1 : 0
+  if (ctx.state.isXhr) {
+    pageInfo = {
+      nextPage
+    }
+  } else {
+    pageInfo = {
+      currPage: page,
+      prevPage: page > 1 ? page - 1 : 0,
+      pages: pageRange(
+        Math.max(1, page + 1 - index), 
+        Math.min(totalPage, page + lastIndex)
+      ),
+      nextPage
+    }
+  }
+
+  // 查找所有烦恼
+  let classics = await Classic.find({})
+    .select('_id title poster summary creator_id mind_id updated_date')
+    .populate('author', 'nickname')
+  .populate('mind', 'content')
+    .sort({ updated_date: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('classics', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    features: constant.FEATURES,
+    noDataTips: constant.NO_CLASSICS,
+    pageInfo,
+    classics,
+    info
+  })
+
+  ctx.session.info = null
+})
+
+// app下载页
+router.get('/appdownload', (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: constant.APP_NAME,
+    is_wechat: false
+  })
+
+  return ctx.fullRender('index', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN
+  })
 })
 
 // 更新密码
@@ -849,73 +936,6 @@ async function getNotification(uid) {
   return notification
 }
 
-// 引经据典
-router.get('/classic', async (ctx, next) => {
-  ctx.state = Object.assign(ctx.state, { 
-    title: [
-      constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——'),
-    is_wechat: false,
-  })
-
-  // 分页
-  let { query } = ctx.request
-  let range = +query.range || constant.PAGE_RANGE
-  let page = +query.page || 1
-  let limit = +query.perPage || constant.LIST_LIMIT
-  let skip = (page - 1) * limit
-  let index = range / 2
-  let lastIndex = range - index
-
-  // 来源页错误信息
-  let info = ctx.session.info
-
-  // 著作总数
-  let total = await Classic.estimatedDocumentCount()
-  let totalPage = Math.ceil(total / limit)
-  let pageInfo = null
-
-  const nextPage = page < totalPage ? page + 1 : 0
-  if (ctx.state.isXhr) {
-    pageInfo = {
-      nextPage
-    }
-  } else {
-    pageInfo = {
-      currPage: page,
-      prevPage: page > 1 ? page - 1 : 0,
-      pages: pageRange(
-        Math.max(1, page + 1 - index), 
-        Math.min(totalPage, page + lastIndex)
-      ),
-      nextPage
-    }
-  }
-
-  // 查找所有烦恼
-  let classics = await Classic.find({})
-    .select('_id title summary creator_id')
-    .sort({ created_date: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
-
-  // 返回并渲染首页
-  await ctx.fullRender('classics', {
-    appName: constant.APP_NAME,
-    slogan: constant.APP_SLOGAN,
-    features: constant.FEATURES,
-    noDataTips: constant.NO_CLASSICS,
-    pageInfo,
-    classics,
-    classic: null,
-    info
-  })
-
-  ctx.session.info = null
-})
-
 // 返回小红点数据
 router.get('/notification', async (ctx, next) => {
   const { user } = ctx.state
@@ -1098,12 +1118,24 @@ router.get('/mind', async (ctx, next) => {
   let { user } = ctx.state
   , uid = user && user._id
   , quoteQuery = Mind.quoteQuery(uid)
+  , nickname = user && user.nickname
+
+  // 标题和其他配置信息
+  ctx.state = Object.assign(ctx.state, { 
+    title: [ constant.APP_NAME,  nickname].join('——'),
+    description: constant.APP_SLOGAN,
+    keywords: constant.SITE_KEWWORDS,
+    is_wechat: false,
+  })
 
   // 分页
   let { query } = ctx.request
+  let range = +query.range || constant.PAGE_RANGE
   let page = +query.page || 1
   let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
+  let index = range / 2
+  let lastIndex = range - index
   let condition = {
     creator_id: user._id
   }
@@ -1111,8 +1143,22 @@ router.get('/mind', async (ctx, next) => {
   // 心念总数
   let total = await Mind.countDocuments(condition)
   let totalPage = Math.ceil(total / limit)
-  let pageInfo = {
-    nextPage: page < totalPage ? page + 1 : 0
+  let pageInfo = null
+  const nextPage = page < totalPage ? page + 1 : 0
+  if (ctx.isXhr) {
+    pageInfo = {
+      nextPage
+    }
+  } else {
+    pageInfo = {
+      currPage: page,
+      prevPage: page > 1 ? page - 1 : 0,
+      pages: pageRange(
+        Math.max(1, page + 1 - index), 
+        Math.min(totalPage, page + lastIndex)
+      ),
+      nextPage
+    }
   }
 
   // 查找所有记录
@@ -1184,7 +1230,8 @@ router.get('/mind', async (ctx, next) => {
       created_date: 1,
       updated_date: 1,
       visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
-      quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+      quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+      quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
       new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
       last_reply: { $cond : [ { $eq : ['$last_reply', []]}, [ null ], '$last_reply'] },
       state_change_date: 1
@@ -1192,7 +1239,8 @@ router.get('/mind', async (ctx, next) => {
     { $unwind: '$visitor' },
     { $unwind: '$new_reply' },
     { $unwind: '$last_reply' },
-    { $unwind: '$quote' },
+    { $unwind: '$quote_mind' },
+    { $unwind: '$quote_classic' },
     { $project: {
       _id: 1, 
       type_id: 1, 
@@ -1205,7 +1253,7 @@ router.get('/mind', async (ctx, next) => {
       created_date: 1,
       updated_date: 1,
       has_new: 1,
-      quote: 1,
+      quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
       new_reply: 1,
       last_reply: 1,
       reply_visit_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
@@ -1217,62 +1265,102 @@ router.get('/mind', async (ctx, next) => {
     { $limit: limit }
   ])
 
-  // 返回并渲染首页
-  ctx.body = {
-    success: true,
+  await ctx.fullRender('diary', {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
     features: constant.FEATURES,
     noDataTips: constant.NO_MIND,
     pageInfo,
-    minds,
-  }
+    minds
+  })
 })
 
 // 尘
-router.get('/earth', async (ctx, next) => {
+router.get(['/', '/earth'], async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: constant.APP_NAME,
+    description: constant.APP_SLOGAN,
+    keywords: constant.SITE_KEWWORDS,
+    is_wechat: false,
+  })
+
   // 分页
   let { query } = ctx.request
+  let range = +query.range || constant.PAGE_RANGE
   let page = +query.page || 1
   let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
+  let index = range / 2
+  let lastIndex = range - index
+
+  // 分类
+  let tag = query.tag
+  , matchCon = {
+    type_id: 'share'
+  }
+
+  if (tag && tag === 'works') {
+    matchCon.ref_type = 'classic'
+  }
+
+  if (tag && tag === 'article') {
+    matchCon.$and = [
+      {
+        'title': { '$ne': '' }
+      }, {
+        'title': { '$ne': null }
+      }, { 
+        'ref_type': { '$ne': 'classic' } 
+      }
+    ]
+  }
+
+  if (tag && tag === 'other') {
+    matchCon.$and = [
+      {
+        $or: [
+          {
+            'title': { '$eq': '' }
+          }, {
+            'title': { '$eq': null }
+          }
+        ]
+      },
+      { 'ref_type': { '$ne': 'classic' } }
+    ]
+  }
+
 
   // 心念总数
-  let total = await Mind.estimatedDocumentCount()
+  let total = await Mind.countDocuments(matchCon)
   let totalPage = Math.ceil(total / limit)
-  const nextPage = page < totalPage ? page + 1 : 0
-  const pageInfo = {
-    nextPage
-  }
+  let pageInfo = null
 
   const { user } = ctx.state
   , uid = user && user._id
   // 查找所有记录
-  , neFriendshipMatch = Friend.neFriendshipMatch(uid)
-  let condition = [
-    // 获取引用
-    ...Mind.quoteQuery(uid),
-    neFriendshipMatch,
-    { '$sort': { 'state_change_date': -1} },
-    { '$skip' : skip },
-    { "$limit": limit }
-  ]
+  let condition = []
+  , match = { $match: matchCon }
   , project = { 
     '$project': {
       '_id': 1, 
       'type_id': 1, 
       'column_id': 1, 
       'title': 1, 
+      'ref_type': 1,
       'content': 1, 
       'is_extract': 1, 
       'summary': 1, 
       'perm_id': 1,
-      'quote': { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+      'behalf': 1,
+      'quote_mind': { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+      'quote_classic': { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
       'created_date': 1, 
       'state_change_date': 1,
       'creator_id': 1
     }
   }
+
   if (uid) {
     project.$project.recipient = { 
       $cond : [ { $eq : ['$recipient', []]}, [ null ], '$recipient'] 
@@ -1280,31 +1368,45 @@ router.get('/earth', async (ctx, next) => {
     project.$project.requester = { 
       $cond : [ { $eq : ['$requester', []]}, [ null ], '$requester'] 
     }
-    condition.splice(1, 1,
+    condition = [
+      match,
       ...Friend.friendshipQuery(uid),
+      // 获取引用
+      ...Mind.quoteQuery(uid),
       project,
       { $unwind: '$recipient'},
       { $unwind: '$requester'},
-      { $unwind: '$quote'},
-      neFriendshipMatch,
+      { $unwind: '$quote_mind'},
+      { $unwind: '$quote_classic'},
       {
         $project: Object.assign({}, project.$project, {
-          quote: 1
+          quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         })
-      }
-    )
+      },
+      { '$sort': { 'state_change_date': -1} },
+      { '$skip' : skip },
+      { "$limit": limit }
+    ]
   }
   else {
-    condition.splice(2, 0,
+    condition = [
+      match,
+      // 获取引用
+      ...Mind.quoteQuery(uid),
       project, 
-      { $unwind: '$quote'},
+      { $unwind: '$quote_mind'},
+      { $unwind: '$quote_classic'},
       {
         $project: Object.assign({}, project.$project, {
-          quote: 1
+          quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         })
-      }
-    )
+      },
+      { '$sort': { 'state_change_date': -1} },
+      { '$skip' : skip },
+      { "$limit": limit }
+    ]
   }
+
   let minds = await Mind.aggregate(
     condition
   )
@@ -1327,14 +1429,31 @@ router.get('/earth', async (ctx, next) => {
   }
 
   // 返回并渲染首页
-  ctx.body = {
-    success: true,
+  const nextPage = page < totalPage ? page + 1 : 0
+  if (ctx.isXhr) {
+    pageInfo = {
+      nextPage
+    }
+  } else {
+    pageInfo = {
+      currPage: page,
+      prevPage: page > 1 ? page - 1 : 0,
+      pages: pageRange(
+        Math.max(1, page + 1 - index), 
+        Math.min(totalPage, page + lastIndex)
+      ),
+      nextPage
+    }
+  }
+  await ctx.fullRender('classics', {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
     features: constant.FEATURES,
+    noDataTips: constant.NO_CLASSICS,
+    currTag: tag,
     pageInfo,
-    minds,
-  }
+    minds
+  })
 })
 
 // 投缘
@@ -1682,7 +1801,8 @@ router.get('/karma/talk', async (ctx, next) => {
       created_date: 1,
       updated_date: 1,
       visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
-      quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+      quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+      quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
       new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
       last_reply: { $cond : [ { $eq : ['$last_reply', []]}, [ null ], '$last_reply'] },
       state_change_date: 1
@@ -1692,7 +1812,8 @@ router.get('/karma/talk', async (ctx, next) => {
     { $unwind: '$visitor' },
     { $unwind: '$new_reply' },
     { $unwind: '$last_reply' },
-    { $unwind: '$quote' },
+    { $unwind: '$quote_mind' },
+    { $unwind: '$quote_classic' },
     { $project: {
       _id: 1, 
       type_id: 1, 
@@ -1707,7 +1828,7 @@ router.get('/karma/talk', async (ctx, next) => {
       created_date: 1,
       updated_date: 1,
       has_new: 1,
-      quote: 1,
+      quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
       new_reply: 1,
       last_reply: 1,
       reply_visit_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
@@ -1847,6 +1968,8 @@ router.get('/help/:id', async (ctx, next) => {
           { $project: {
             _id: 1,
             content: 1,
+            type: 1,
+            sub_type: 1,
             reply_type: 1,
             parent_id: 1,
             creator_id: 1,
@@ -1857,7 +1980,8 @@ router.get('/help/:id', async (ctx, next) => {
             friend: { $cond : [ { $eq : ['$friend', []]}, [ null ], '$friend'] },
             receiver: { $cond : [ { $eq : ['$receiver', []]}, [ null ], '$receiver'] },
             friend_receiver: { $cond : [ { $eq : ['$friend_receiver', []]}, [ null ], '$friend_receiver'] },
-            quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+            quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+            quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
           }},
           { $sort: { created_date: -1 } },
           { $skip: skip },
@@ -1866,13 +1990,16 @@ router.get('/help/:id', async (ctx, next) => {
           { $unwind: '$friend' },
           { $unwind: '$receiver' },
           { $unwind: '$friend_receiver' },
-          { $unwind: '$quote' },
+          { $unwind: '$quote_mind' },
+          { $unwind: '$quote_classic' },
           { $unwind: '$recipient'},
           { $unwind: '$requester'},
           Friend.replyfriendshipMatch(uid),
           { $project: {
             _id: 1,
             content: 1,
+            type: 1,
+            sub_type: 1,
             reply_type: 1,
             creator_id: 1,
             created_date: 1,
@@ -1880,7 +2007,7 @@ router.get('/help/:id', async (ctx, next) => {
             friend: 1,
             receiver: 1,
             friend_receiver: 1,
-            quote: 1,
+            quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
           }},
         ],
         as: 'replies'
@@ -1889,34 +2016,40 @@ router.get('/help/:id', async (ctx, next) => {
         _id: 1,
         type_id: 1,
         title: 1,
+        summary: 1,
         content: 1,
         creator_id: 1,
         perm_id: 1,
+        behalf: 1,
         last_reply_date: 1,
         created_date: 1,
         replies: '$replies',
         author: { $cond : [ { $eq : ['$author', []]}, [ null ], '$author'] },
         friend: { $cond : [ { $eq : ['$friend', []]}, [ null ], '$friend'] },
-        quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+        quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+        quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
         isThanked: { $cond : [ { $eq : ['$thank', []]}, false, true] },
       }},
       { $unwind: '$author' },
       { $unwind: '$friend' },
-      { $unwind: '$quote' },
+      { $unwind: '$quote_mind' },
+      { $unwind: '$quote_classic' },
       { $project: {
         _id: 1,
         type_id: 1,
         title: 1,
+        summary: 1,
         content: 1,
         creator_id: 1,
         perm_id: 1,
+        behalf: 1,
         last_reply_date: 1,
         created_date: 1,
         replies: 1,
         author: 1,
         friend: 1,
         isThanked: 1,
-        quote: 1,
+        quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
       }}
     ]
   )
@@ -2041,11 +2174,14 @@ router.get('/mind/:id', async (ctx, next) => {
         title: 1,
         summary: 1, 
         content: 1,
-        quote: { $cond : [ { $eq : ['$quote', []]}, [ null ], '$quote'] },
+        quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+        quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
         perm_id: 1,
+        behalf: 1,
         state_change_date: 1
       } },
-      { $unwind: '$quote' },
+      { $unwind: '$quote_mind' },
+      { $unwind: '$quote_classic' },
       { $project: {
         _id: 1,
         type_id: 1,
@@ -2053,8 +2189,9 @@ router.get('/mind/:id', async (ctx, next) => {
         title: 1,
         summary: 1, 
         content: 1,
-        quote: 1,
+        quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         perm_id: 1,
+        behalf: 1,
         state_change_date: 1
       } }
     ]
@@ -2072,6 +2209,7 @@ router.get('/mind/:id', async (ctx, next) => {
     need_dom4_script: false,
     // need_global_script: false
     is_wechat,
+    description: mind.summary
   })
 
   let resData = {
@@ -2090,6 +2228,34 @@ router.get('/mind/:id', async (ctx, next) => {
   await ctx.fullRender('mind', resData)
 })
 
+// 引经据典创建页
+router.get('/classic/create', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      constant.APP_NAME, 
+      '推荐作品'
+    ].join('——'),
+    is_wechat: false
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 返回并渲染首页
+  await ctx.fullRender('classicmodify', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    shareHolder: constant.SHARE_HOLDER,
+    features: constant.FEATURES,
+    columns: constant.COLUMNS,
+    backPage: '/',
+    classic: null,
+    info
+  })
+
+  ctx.session.info = null
+})
+
 // 添加章节
 router.get('/classic/:id/section/create', async (ctx, next) => {
   const { id } = ctx.params
@@ -2098,7 +2264,8 @@ router.get('/classic/:id/section/create', async (ctx, next) => {
     title: [
       constant.APP_NAME, 
       constant.APP_HOME_PAGE
-    ].join('——')
+    ].join('——'),
+    is_wechat: false
   })
 
   // 来源页错误信息
@@ -2125,7 +2292,8 @@ router.get('/section/:id/modify', async (ctx, next) => {
     title: [
       constant.APP_NAME, 
       constant.APP_HOME_PAGE
-    ].join('——')
+    ].join('——'),
+    is_wechat: false
   })
 
   // 来源页错误信息
@@ -2268,16 +2436,30 @@ router.get('/translate/:id', async (ctx, next) => {
 // 章节内容页
 router.get('/section/:id', async (ctx, next) => {
   const { id } = ctx.params
+  , section = await Section.findById(id)
+    .select('_id classic_id title content')
+    .lean()
+  , { classic_id } = section
+  , prevSection = await Section.findOne({ 
+    _id: { $lt: id }, 
+    classic_id
+  })
+    .select('_id')
+    .lean()
+  , nextSection = await Section.findOne({ 
+    _id: { $gt: id }, 
+    classic_id
+  })
+    .select('_id')
+    .lean()
+
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
+      section.title
+    ].join('——'),
+    is_wechat: false
   })
-
-  const section = await Section.findById(id)
-    .select('_id classic_id title content')
-    .lean()
 
   // 返回并渲染首页
   await ctx.fullRender('section', {
@@ -2285,6 +2467,8 @@ router.get('/section/:id', async (ctx, next) => {
     slogan: constant.APP_SLOGAN,
     features: constant.FEATURES,
     section,
+    prevSection,
+    nextSection,
     backPage: '/classic/' + section.classic_id
   })
 
@@ -2293,23 +2477,27 @@ router.get('/section/:id', async (ctx, next) => {
 
 // 引经内容页
 router.get('/classic/:id', async (ctx, next) => {
+  // 查找典籍
+  let classic_id = ctx.params.id
+  , classic = await Classic.findById(classic_id)
+    .select('_id title poster content mind_id')
+    .populate('mind', 'content')
+    .lean()
+
+  // 标题
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
+      classic.title
+    ].join('——'),
+    is_wechat: false,
   })
 
-  // 查找典籍
-  let classic = await Classic.findById(
-    ctx.params.id)
-    .select('_id title poster summary content')
-    .lean()
-
   // 分页
-  let range = constant.PAGE_RANGE
-  let page = 1
-  let limit = constant.LIST_LIMIT
+  let { query } = ctx.request
+  let range = +query.range || constant.PAGE_RANGE
+  let page = +query.page || 1
+  let limit = +query.perPage || constant.LIST_LIMIT
   let skip = (page - 1) * limit
   let index = range / 2
   let lastIndex = range - index
@@ -2318,7 +2506,7 @@ router.get('/classic/:id', async (ctx, next) => {
   let info = ctx.session.info
 
   // 章节总数
-  let total = await Section.estimatedDocumentCount()
+  let total = await Section.countDocuments({ classic_id  })
   let totalPage = Math.ceil(total / limit)
   let pageInfo = null
 
@@ -2342,7 +2530,7 @@ router.get('/classic/:id', async (ctx, next) => {
   let sections = await Section.find({
     classic_id: ctx.params.id
   })
-    .select('_id title')
+    .select('_id title creator_id')
     .skip(skip)
     .limit(limit)
     .lean()
@@ -2353,7 +2541,7 @@ router.get('/classic/:id', async (ctx, next) => {
     slogan: constant.APP_SLOGAN,
     classic,
     sections,
-    backPage: '/classic',
+    backPage: '/',
     pageInfo,
     info
   })
@@ -2396,7 +2584,8 @@ router.get('/section/:id/translates', async (ctx, next) => {
     title: [
       constant.APP_NAME, 
       constant.APP_HOME_PAGE
-    ].join('——')
+    ].join('——'),
+    is_wechat: false
   })
 
   // 分页
@@ -2461,31 +2650,33 @@ router.get('/section/:id/translates', async (ctx, next) => {
 
 // 引经据典编辑页
 router.get('/classic/:id/modify', async (ctx, next) => {
+  const classId = ctx.params.id
   ctx.state = Object.assign(ctx.state, { 
     title: [
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——')
+      '编辑作品'
+    ].join('——'),
+    is_wechat: false
   })
 
   // 来源页错误信息
   let info = ctx.session.info
 
   // 查找所有烦恼
-  let classic = await Classic.findById(
-    ctx.params.id)
-    .select('_id title poster summary content')
+  let classic = await Classic.findById(classId)
+    .select('_id title poster content mind_id')
+    .populate('mind', 'content')
     .lean()
 
   // 返回并渲染首页
   await ctx.fullRender('classicmodify', {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
-    classicHolder: constant.CLASSIC_HOLDER,
+    shareHolder: constant.SHARE_HOLDER,
     features: constant.FEATURES,
     columns: constant.COLUMNS,
     classic,
-    backPage: '/classic',
+    backPage: '/classic/' + classId,
     info
   })
 
@@ -2511,6 +2702,64 @@ router.get('/config', async (ctx, next) => {
   ctx.session.info = null
 })
 
+// 
+router.post('/uploadImg', async (ctx, next) =>{
+  try {
+    let accessKey = 'tuLyXahBtm_MifuxWpTuOgYQHbygXS2Yyg5ytRNw'  // 源码删除:七牛云获取 ak,必须配置
+    let secretKey = '955YhRqvnNBrdbSc_HFEhAGrw6z2K7e43r6zWwDy'  // 源码删除:七牛云获取 sk, 必须配置
+    let mac = new qiniu.auth.digest.Mac(accessKey, secretKey)
+    let options = {
+      scope: 'tianye',  // 对应七牛云存储空间名称
+      insertOnly: 1,
+      expires: 7200 //token过期时间
+    }
+    let putPolicy = new qiniu.rs.PutPolicy(options)
+    let uploadToken = putPolicy.uploadToken(mac)
+    let form = formidable.IncomingForm()
+    let {respErr, respBody, respInfo, filename} = await new Promise((resolve, reject) => {
+      form.parse(ctx.req, function (err, fields, file) {
+        if (file) {
+          let localFile = file.file.path
+          let config = new qiniu.conf.Config()
+          let formUploader = new qiniu.form_up.FormUploader(config)
+          let putExtra = new qiniu.form_up.PutExtra()
+          let key= file.file.name
+
+          crypto.pseudoRandomBytes(16, function (err, raw) {
+            if (err) {
+              reject(err)
+              return
+            }
+
+            let ext = path.extname(key)
+            key = [raw.toString('hex'), ext].join('')
+            formUploader.putFile(uploadToken, key, localFile, putExtra, function(respErr, respBody, respInfo) {
+              resolve({
+                respErr,
+                respBody,
+                respInfo,
+                filename: key
+              })
+            })
+          })
+        }
+      })
+    })
+    ctx.body = {
+      respErr,
+      img: `https://image.tianyeapp.top/${respBody.key}`,//在七牛云上配置域名
+      hash: respBody.hash,
+      status: respInfo.statusCode,
+      filename: respBody.key
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      info: err.message || '上传图片失败'
+    }
+  }
+})
+
 // 发布心念
 router.post('/mind', async (ctx) => {
   const { 
@@ -2520,7 +2769,8 @@ router.post('/mind', async (ctx) => {
     column_id, 
     ref_id, 
     ref_type,
-    perm_id
+    perm_id,
+    behalf
   } = ctx.request.body
   , { user } = ctx.state
   let info = ''
@@ -2533,16 +2783,15 @@ router.post('/mind', async (ctx) => {
       column_id,
       ref_id,
       ref_type,
-      perm_id
+      perm_id,
+      behalf
     })
-  } catch (err) {
-    info = filterMsg(err.message)
-  }
-  if (!info) {
     ctx.body = {
       success: true
     }
-  } else {
+  } catch (err) {
+    //console.log(err)
+    info = filterMsg(err.message)
     ctx.body = {
       success: false,
       info,
@@ -2557,7 +2806,8 @@ router.put('/mind/:id', async (ctx) => {
     content, 
     title, 
     column_id, 
-    perm_id
+    perm_id,
+    behalf
   } = ctx.request.body
   const { user } = ctx.state
   const is_extract = content.length > constant.SUMMARY_LIMIT - 3
@@ -2578,6 +2828,7 @@ router.put('/mind/:id', async (ctx) => {
         column_id, 
         is_extract,
         perm_id,
+        behalf,
         updated_date: now,
         state_change_date: now,
       },
@@ -2600,30 +2851,69 @@ router.post('/classic', async (ctx) => {
   const { title, poster, summary, content } = ctx.request.body
   const { user } = ctx.state
   try {
-    await Classic.create({ 
+    let newClassic = new Classic({ 
       title,
       poster,
-      summary,
+      summary: Classic.extract(content),
       content,
       creator_id: user.id
     })
+    let newMind = new Mind({ 
+      type_id: 'share',
+      content: summary,
+      creator_id: user.id,
+      column_id: 'sentence',
+      ref_type: 'classic',
+      perm_id: 'all',
+    })
+    newClassic.mind_id = newMind._id
+    newMind.ref_id = newClassic._id
+    await newClassic.save()
+    await newMind.save()
+    ctx.body = {
+      success: true,
+    }
   } catch (err) {
-    ctx.session.info = err.message
+    ctx.body = {
+      success: false,
+      info: err.message
+    }
   }
-  ctx.redirect('/classic')
-  ctx.status = 302
 })
 
-// 引经据典修改
+// 引经据典详情页
 router.put('/classic/:id', async (ctx) => {
   const { title, poster, summary, content } = ctx.request.body
-  const { user } = ctx.state
+  , { user } = ctx.state
+  , now = new Date()
   try {
-    await Classic.updateOne({
+    let classic = await Classic.findOneAndUpdate({
       _id: ctx.params.id,
       creator_id: user._id
     }, { 
-      $set: { title, poster, summary, content },
+      $set: {
+        title, 
+        poster, 
+        summary: Classic.extract(content), 
+        content,
+        updated_date: now,
+      },
+    }, { 
+      runValidators: true 
+    })
+
+    let fields = { 
+      content: summary,
+      updated_date: now,
+    }
+    fields.is_extract = summary.length > constant.SUMMARY_LIMIT - 3
+    fields.summary = fields.is_extract
+      ? Mind.extract(summary)
+      : summary
+    await Mind.updateOne({
+      _id: classic.mind_id
+    }, { 
+      $set: fields
     }, { 
       runValidators: true 
     })
@@ -3188,6 +3478,31 @@ router.delete('/mind/:id', async (ctx, next) => {
 router.delete('/classic/:id', async (ctx, next) => {
   try {
     let res = await Classic.deleteOne({
+      creator_id: ctx.state.user.id,
+      _id: ctx.params.id
+    })
+    if (res.ok && res.n) {
+      ctx.body = {
+        success: true
+      }
+    } else {
+      ctx.body = {
+        success: false,
+        message: '删除失败'
+      }
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      message: err.message
+    }
+  }
+})
+
+// 删除章节
+router.delete('/section/:id', async (ctx, next) => {
+  try {
+    let res = await Section.deleteOne({
       creator_id: ctx.state.user.id,
       _id: ctx.params.id
     })

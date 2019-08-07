@@ -1,12 +1,6 @@
 import '@babel/polyfill'
 import { get, del, post } from './lib/request'
 import ejs from 'ejs'
-// 其他组件引入
-import classicEditor from './component/classiceditor'
-
-if (globalData.user) {
-  classicEditor.create()
-}
 
 // 组件开始
 import recommendTempHtml from '../../views/particles/recommend.html'
@@ -25,7 +19,8 @@ const d = document,
 classicList = d.getElementById('classics')
 
 classicList.addEventListener('click', async (e) => {
-  let el = e.target
+  e = window.event || e
+  let el = e.srcElement || e.targett
   while (el && el !== e.currentTarget) {
     if (el.matches('[rel-ctl="classic-remove"]')) {
       let hiding = ((el.dataset && el.dataset.hiding || el.getAttribute('data-hiding')) === 'true')

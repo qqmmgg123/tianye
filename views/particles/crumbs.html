@@ -1,3 +1,9 @@
 <div class="crumbs">
-  <a href="<%= backPage %>">返回</a>
+  <a href="<%= backPage %>" class="link">
+    <i class="iconfont icon-fanhui"></i>
+    返回
+  </a>
+  <% if (typeof right_btn !== 'undefined' && right_btn) { %>
+  <a href="<%= redirect %>" class="button">编辑</a>
+  <% } %>
 </div>

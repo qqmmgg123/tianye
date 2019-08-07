@@ -2,6 +2,16 @@ const Schema = require('mongoose').Schema
 const constant = require('../settings/const')
 
 let mindSchema = new Schema({
+  // 以组织或以个人名义
+  behalf: {
+    type: String,
+    enum: ['personal', 'organization'],
+    required: [
+      true, 
+      constant.MISS_PARAMS
+    ],
+    default: 'personal'
+  },
   type_id: {
     type: String,
     enum: ['diary', 'help', 'share'],
@@ -39,7 +49,7 @@ let mindSchema = new Schema({
   // 引用类型
   ref_type: {
     type: String,
-    enum: ['mind'],
+    enum: ['mind', 'classic'],
     trim: true
   },
   // 创建者id
@@ -59,6 +69,7 @@ let mindSchema = new Schema({
     ],
   },
   // 查看权限类型
+  // TODO 可以发到指定的组织
   perm_id: {
     type: String,
     enum: ['me', 'friend', 'all'],
@@ -87,18 +98,18 @@ let mindSchema = new Schema({
   },
 })
 
-mindSchema.pre('save', async function() {
+mindSchema.pre('validate', async function() {
   this.title && (this.title = this.title.replace(/\r|\n|\t/gi, ''))
   if (!this.perm_id) {
-    switch (type_id) {
+    switch (this.type_id) {
       case 'diary':
-        this.perm_id === 'me'
+        this.perm_id = 'me'
         break
       case 'help':
-        this.perm_id === 'friend'
+        this.perm_id = 'friend'
         break
       case 'share':
-        this.perm_id === 'all'
+        this.perm_id = 'all'
         break
     }
   }

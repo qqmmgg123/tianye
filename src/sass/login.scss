@@ -1,15 +1,38 @@
 @import 'common.scss';
+button {
+  line-height: 22px;
+  &[type=submit] {
+    width: 100%
+  }
+}
+
 form {
   margin: auto;
   max-width: 360px;
   padding: 10px;
   box-sizing: border-box;
+  .server-info {
+    padding: 10px;
+    box-sizing: border-box;
+    color: red;
+    font-size: 14px;
+    padding-left: 0;
+  }
 }
 
 .form-group {
   margin-bottom: 10px;
   input {
     width: 100%;
+    max-width: 360px;
     box-sizing: border-box;
+  }
+  .link {
+    width: 100%;
+    line-height: 22px;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    display: block;
   }
 }

@@ -1,2 +1,24 @@
 @import 'common.scss';
 @import './particles/classiceditor.scss';
+
+/* public */
+.tips {
+  line-height: 22px;
+  padding: 10px 0;
+}
+
+.file-upload {
+  padding: 10px;
+  border: 1px solid #eaeaea;
+  border-radius: 3px;
+  overflow: hidden;
+  a {
+    display: block;
+    float: left;
+  }
+  div {
+    float: right;
+    padding: 10px;
+    line-height: 12px;
+  }
+}

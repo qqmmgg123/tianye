@@ -1,5 +1,5 @@
 <%- include(tempRoot + 'particles/crumbs.html') %>
-<% if (user && (user.administrator || user.super)) { %>
+<% if (user) { %>
   <div class="editor">
     <% if (translate && translate._id) { %>
       <form id="translateForm" method="put"  action="/translate/<%= translate._id %> %>">

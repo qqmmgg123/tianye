@@ -33,8 +33,8 @@ function scripts(filename) {
       .pipe(buffer())
       .pipe(plumber())
       .pipe(uglify())
-      .pipe(sourcemaps.init({loadMaps: true}))
-      .pipe(sourcemaps.write('./'))
+      // .pipe(sourcemaps.init({loadMaps: true}))
+      // .pipe(sourcemaps.write('./'))
       .pipe(gulp.dest('dist/js'))
       .pipe(browserSync.stream())
   }
@@ -95,8 +95,8 @@ gulp.task('scripts', (done) => {
       .pipe(buffer())
       .pipe(plumber())
       .pipe(uglify())
-      .pipe(sourcemaps.init({loadMaps: true}))
-      .pipe(sourcemaps.write('./'))
+      // .pipe(sourcemaps.init({loadMaps: true}))
+      // .pipe(sourcemaps.write('./'))
       .pipe(gulp.dest('dist/js'));
     })
     es.merge(tasks).on('end', done);

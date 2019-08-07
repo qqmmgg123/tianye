@@ -53,9 +53,6 @@
 }
 
 @media screen and (min-width: $viewWidth + 62) {
-  .view-area {
-    max-width: $viewWidth;
-  }
   .ctrl-bar {
     position: fixed;
     width: 42px;
