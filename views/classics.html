@@ -1,20 +1,33 @@
-<div class="content-header">
+<% if (user && (user.administrator || user.super)) { %>
+<div class="crumbs">
   <div class="button-area">
-    <% if (user) { %>
     <a href="/mind/create" class="button">分享感悟</a>
-    <a href="/classic/create" class="button">推荐作品</a>
-    <% } else { %>
-    <a href="/login" class="button">分享感悟</a>
-    <a href="/login" class="button">推荐作品</a>
-    <% } %>
+    <a href="/classic/create" class="button">推荐内容</a>
+    <!--<a href="/login" class="button">分享感悟</a>-->
+    <!--<a href="/login" class="button">推荐内容</a>-->
   </div>
 </div>
 <hr>
+<% } %>
 <div class="tags">
-  <a href="/">全部</a>
-  <a href="?tag=works">作品</a>
-  <a href="?tag=article">文章</a>
-  <a href="?tag=other">句子</a>
+  <div class="categorys">
+    <a class="<%= !currTag ? 'active' : '' %>" href="/<%= currKeyword ? '?keywords=' + currKeyword : '' %>">全部</a>
+    <a class="<%= currTag === 'works' ? 'active' : '' %>" href="?tag=works<%= currKeyword ? '&keywords=' + currKeyword : '' %>">作品</a>
+    <a class="<%= currTag === 'article' ? 'active' : '' %>" href="?tag=article<%= currKeyword ? '&keywords=' + currKeyword : '' %>">文章</a>
+    <a class="<%= currTag === 'sentence' ? 'active' : '' %>" href="?tag=sentence<%= currKeyword ? '&keywords=' + currKeyword : '' %>">句子</a>
+  </div>
+  <% if (keywordList && keywordList.length) { %>
+  <div class="keyword-list">
+    <% keywordList.forEach(keyword => { %>
+    <% let params= [ currTag ? 'tag=' + currTag : '', currKeyword === keyword._id ? '' : 'keywords=' + keyword._id ].filter(item => !!item); %>
+    <a class="<%= currKeyword === keyword._id ? 'active' : '' %>" href="<%= params.length > 0 ? '?' + params.join('&') : '/' %>"><%= keyword._id %><%- currKeyword === keyword._id ? '<i class="iconfont icon-guanbi"></i>' : '' %></a>
+    <% }) %>
+  </div>
+  <% } %>
+  <div class="show-more" style="display: none;">
+    <span>点击展开更多</span>
+    <i class="iconfont icon-fanhui"></i>
+  </div>
 </div>
 <hr>
 <ol id="classics" class="list">

@@ -1,8 +1,10 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
 .content {
   h1 {
     font-size: 20px;
     text-align: center;
+    font-weight: 500;
+    margin-top: 30px;
   }
   
   .content-viewer {

@@ -1,3 +1,4 @@
+<% if (pageInfo.pages.length > 1) { %>
 <li class="pagination">
   <% if (pageInfo.prevPage) { %>
   <a class="page-num" href="?page=<%= pageInfo.prevPage %><% if (typeof currTag !== 'undefined') { %>&tag=<%= currTag %><% } %>">上一页</a>
@@ -13,3 +14,4 @@
   <a class="page-num" href="?page=<%= pageInfo.nextPage %><% if (typeof currTag !== 'undefined') { %>&tag=<%= currTag %><% } %>">下一页</a>
   <% } %>
 </li>
+<% } %>

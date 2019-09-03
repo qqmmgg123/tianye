@@ -1,4 +1,4 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
 ol.list {
   > li.item {
     .datetime {
@@ -6,6 +6,8 @@ ol.list {
       color: lighten($gray, 60%);
       float: left;
       display: block;
+      line-height: 12px;
+      padding: 10px;
     }
   }
 }

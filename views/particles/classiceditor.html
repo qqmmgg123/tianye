@@ -1,34 +1,98 @@
 <% if (user) { %>
 <div class="editor">
-  <input style="display: none;" type="file" v-bind:accept="allowTypes" v-on:change="fileChange" ref="fileInput">
+  <input style="display: none;" type="file" accept="image/gif, image/png, image/jpeg, image/jpg, image/bmp, image/webp">
+  <% if (typeof classic !== 'undefined') { %>
   <% if (classic && classic._id) { %>
     <form id="classicForm" method="put"  action="/classic/<%= classic._id %>">
   <% } else { %>
     <div class="tips">
-      ! 请推荐对他人心灵有帮助的书籍。
+      ! 请推荐对他人心灵有帮助的内容。
     </div>
     <form id="classicForm" method="post" action="/classic">
   <% } %>
+  <% } %>
+  <% if (typeof mind !== 'undefined') { %>
+  <% if (mind && mind._id) { %>
+    <form id="classicForm" method="put"  action="/mind/<%= mind._id %>">
+  <% } else { %>
+    <form id="classicForm" method="post" action="/mind">
+  <% } %>
+  <% } %>
+    <% if (typeof classic !== 'undefined') { %>
     <div class="form-group">
-      <textarea name="summary" placeholder="推荐理由（<%= shareHolder %>）"><%= classic && classic.mind && (classic.mind.content || (classic.mind[0] && classic.mind[0].content)) || '' %></textarea>
+      <textarea maxlength="147" name="reason" placeholder="推荐理由（147个字以内，<%= shareHolder %>）"><%= classic && classic.mind && (classic.mind.content || (classic.mind[0] && classic.mind[0].content)) || '' %></textarea>
     </div>
     <div class="form-group">
-      <input name="title" placeholder="作品标题" value="<%= classic && classic.title || '' %>" />
+      <input type="text" name="original_author" placeholder="原作者" value="<%= classic && classic.original_author || '' %>" />
     </div>
     <div class="form-group">
+      <input type="text" name="source" placeholder="来源" value="<%= classic && classic.source || '' %>" />
+    </div>
+    <% } %>
+    <div class="form-group">
+      书写类型：
+      <% if (typeof mind !== 'undefined') { %>
+      <% [{ value: 'sentence', name: '句子' }, { value: 'article', name: '文章' }, { value: 'works', name: '作品' }].forEach(function(item) { %>
+      <input name="column_id" type="radio" value="<%= item.value %>"<% if ((mind && item.value === mind.column_id) || (!mind && item.value === 'sentence')) { %> checked<% } %>><label><%= item.name %></label>
+      <% }) %>
+      <% } %>
+      <% if (typeof classic !== 'undefined') { %>
+      <% [{ value: 'sentence', name: '句子' }, { value: 'article', name: '文章' }, { value: 'works', name: '作品' }].forEach(function(item) { %>
+      <input name="column_id" type="radio" value="<%= item.value %>"<% if ((classic && item.value === classic.column_id) || (!classic && item.value === 'sentence')) { %> checked<% } %>><label><%= item.name %></label>
+      <% }) %>
+      <% } %>
+    </div>
+    <% if (typeof mind !== 'undefined') { %>
+    <div class="form-group" style="display: <% if (!mind || (mind && mind.column_id === 'works')) { %>''<% } else { %>none<% } %>;">
       <div class="file-upload">
         <a class="button" href="javascript:;">上传封面</a>
-        <div style="display: none;" class="progress">上传进度：<span>0%</span></div>
+        <div style="display: none;" class="progress">上传进度：<span>0%</span></div> 
       </div>
-      <input type="hidden" name="poster" value="<%= classic && classic.poster || '' %>" />
+      <input type="hidden" name="poster" value="<%= mind && mind.poster || '' %>" />
     </div>
+    <% } %>
+    <% if (typeof classic !== 'undefined') { %>
+    <div class="form-group" style="display: <% if (!classic || (classic && classic.column_id === 'works')) { %>''<% } else { %>none<% } %>;">
+      <div class="file-upload">
+        <a class="button" href="javascript:;">上传封面</a>
+        <div style="display: none;" class="progress">上传进度：<span>0%</span></div> 
+      </div>
+      <input type="hidden" name="poster" value="<%= classic && classic.poster || '' %>">
+    </div>
+    <% } %>
+    <% if (typeof mind !== 'undefined') { %>
+    <div class="form-group" style="display: <% if (!mind || (mind && mind.column_id !== 'sentence')) { %>''<% } else { %>none<% } %>;">
+      <input name="title" type="text" placeholder="标题" value="<%= mind && mind.title || '' %>">
+    </div>
+    <% } %>
+    <% if (typeof classic !== 'undefined') { %>
+    <div class="form-group" style="display: <% if (!classic || (classic && classic.column_id !== 'sentence')) { %>''<% } else { %>none<% } %>;">
+      <input name="title" type="text" placeholder="标题" value="<%= classic && classic.title || '' %>">
+    </div>
+    <% } %>
+    <% if (typeof mind !== 'undefined') { %>
+      <% if (!mind || !mind._id) { %>
+      <input name="type_id" type="hidden" value="share">
+      <% } %>
+    <% } %>
     <div class="form-group">
       <div id="editor" class="pell"></div>
-      <textarea style="display: none;" id="html-output" name="content" rows="6" autofocus><%- classic && classic.content || '' %></textarea>
+      <% if (typeof mind !== 'undefined') { %>
+      <textarea id="html-output" style="display: none;" name="content" rows="6" placeholder="<%= shareHolder || '' %>"><%- mind && mind.content || '' %></textarea>
+      <% } %>
+      <% if (typeof classic !== 'undefined') { %>
+      <textarea id="html-output" style="display: none;" name="content" rows="6" placeholder="<%= shareHolder || '' %>"><%- classic && classic.content || '' %></textarea>
+      <% } %>
+      <div class="tips" style="display: none;"></div>
     </div>
+    <% if (typeof mind !== 'undefined') { %>
+    <div class="form-group">
+      <input type="text" name="keywords" placeholder="类别或关键词，多个用空格分隔" value="<%- mind && mind.keywords && mind.keywords.join(' ') || '' %>" autocomplete="off" />
+    </div>
+    <% } %>
     <div class="bottom-bar">
       <button type="submit" disabled>
-      <% if (classic && classic.title) { %>
+      <% if ((typeof classic !== 'undefined' && classic && classic._id) || (typeof mind !== 'undefined' && mind && mind._id)) { %>
         更新
       <% } else { %>
         发布
@@ -37,5 +101,6 @@
       <span><%= info %></span>
     </div>
   </form>
+  <!--<button style="display: none;" ref="add-section">添加章节</button>-->
 </div>
 <% } %>

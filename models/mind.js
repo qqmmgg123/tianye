@@ -32,15 +32,22 @@ Mind.statics.quoteQuery = function(uid) {
   ]
 }
 
-// 创建和更新前处理
-Mind.pre('save', function(next, done) {
-  if (this.column_id === 'literature' && !this.title) {
-    throw new Error(constant.TITLE_REQUIRED)
+// 创建校验前处理
+Mind.pre('validate', function(next) {
+  // 确定查看权限
+  if (!this.perm_id) {
+    switch (this.type_id) {
+      case 'diary':
+        this.perm_id = 'me'
+        break
+      case 'help':
+        this.perm_id = 'friend'
+        break
+      case 'share':
+        this.perm_id = 'all'
+        break
+    }
   }
-  this.is_extract = this.content.length > constant.SUMMARY_LIMIT - 3
-  this.summary = this.is_extract
-    ? this.constructor.extract(this.content)
-    : this.content
   next()
 })
 
@@ -61,6 +68,11 @@ function getCond(uid, type) {
     perm_id: 1,
     poster: 1
   }}
+
+  if (type === 'classic') {
+    project.$project.original_author = 1
+    project.$project.source = 1
+  }
 
   if (type !== 'mind') return [...condition, project]
 

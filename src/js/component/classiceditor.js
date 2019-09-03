@@ -1,33 +1,39 @@
 import { exec, init } from './richeditor'
 
 export default {
-  create () {
-    let contentEl = document.getElementById('html-output')
+  create ({ bindEl, outputEl, onPreInput }) {
     const editor = init({
-      element: document.getElementById('editor'),
-      onChange: html => {
-        contentEl.textContent = html
+      element: bindEl,
+      onPreInput,
+      onChange: (html) => {
+        outputEl.textContent = html
         dispatchEvent(document.querySelector('textarea[name=content]'), 'input')
       },
       defaultParagraphSeparator: 'p',
+      placeholder: outputEl.placeholder,
+      initialHtml: outputEl.value,
       styleWithCSS: true,
       actions: [
         'bold',
         'underline',
         'italic',
         'strikethrough',
+        'center',
+        'heading1',
+        'heading2',
+        'olist',
+        'ulist',
+        'quote',
+        'image',
       ],
       classes: {
-        actionbar: 'pell-actionbar-custom-name',
-        button: 'pell-button-custom-name',
+        actionbar: 'action-bar',
+        button: 'action-button',
         content: 'rich-textarea',
-        selected: 'pell-button-selected-custom-name'
+        selected: 'action-button-selected'
       }
     })
-
-    // editor.content<HTMLElement>
-    // To change the editor's content:
-    editor.content.innerHTML = contentEl.textContent || '<p>作品正文...</p>'
+    return editor
   }
 }
 

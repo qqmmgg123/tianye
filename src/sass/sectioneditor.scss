@@ -1,2 +1,18 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
 @import './particles/classiceditor.scss';
+
+.file-upload {
+  padding: 10px;
+  border: 1px solid #eaeaea;
+  border-radius: 3px;
+  overflow: hidden;
+  a {
+    display: block;
+    float: left;
+  }
+  div {
+    float: right;
+    padding: 10px;
+    line-height: 12px;
+  }
+}

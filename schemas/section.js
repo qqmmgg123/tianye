@@ -14,6 +14,10 @@ let sectionSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Classic',
   },
+  audio: { 
+    type: String, 
+    trim: true
+  },
   creator_id: Schema.Types.ObjectId,
   updated_date: { type: Date, default: Date.now },
   created_date: { type: Date, default: Date.now },

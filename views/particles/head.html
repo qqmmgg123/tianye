@@ -17,14 +17,32 @@
   <meta name="x5-fullscreen" content="true">
   <title><%= title %></title>
   <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
-  <link href="//at.alicdn.com/t/font_942830_4fh1z9sle27.css" rel="stylesheet">
+  <link href="//at.alicdn.com/t/font_942830_m05r8d3953.css" rel="stylesheet">
+  <% if (env === 'production') { %>
   <link href="<%= globalStyleFile %>?v=201905030333" rel="stylesheet">
   <link href="<%= pageStyleFile %>?v=201905030333" rel="stylesheet">
-  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <!--[if IE]> 
+  <style type="text/css">
+    body {
+      font-family: Microsoft Yahei,Verdana,arial,simhei,sanserif;
+    }
+    nav .menu.active, ol.list>li.item blockquote .main-content .quote-summary, ol.list>li.item blockquote .main-content .quote-title, ol.list>li.item blockquote .main-content .summary, ol.list>li.item blockquote .main-content .title, .tags .categorys a.active, .tags .keyword-list a.active {
+      font-weight: bold;
+    }
+  </style> 
+  <![endif]--> 
+  <style type="text/css">
+    _:-ms-lang(x), body { font-family: Microsoft Yahei,Verdana,arial,simhei,sanserif; }
+    _:-ms-lang(x), nav .menu.active, ol.list>li.item blockquote .main-content .quote-summary, ol.list>li.item blockquote .main-content .quote-title, ol.list>li.item blockquote .main-content .summary, ol.list>li.item blockquote .main-content .title, .tags .categorys a.active, .tags .keyword-list a.active {
+      font-weight: bold;
+    }
+  </style>
+  <% } %>
+  <script src="//unpkg.com/axios/dist/axios.min.js"></script>
   <% if (need_dom4_script) { %>
   <script src="//cdnjs.cloudflare.com/ajax/libs/dom4/2.0.0/dom4.js">/* DOM4 */</script>
   <% } %>
   <% if (is_wechat) { %>
-  <script src='https://res2.wx.qq.com/open/js/jweixin-1.4.0.js'></script>
+  <script src='//res2.wx.qq.com/open/js/jweixin-1.4.0.js'></script>
   <% } %>
 </head>

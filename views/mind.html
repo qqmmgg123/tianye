@@ -1,15 +1,21 @@
 <% if (mind) { %>
+<div class="crumbs">
+  <a href="/">首页</a><span class="crumbs-split"> > </span><span><%= mind.title || '' %></span>
+</div>
+<hr>
 <div class="content">
   <h1><%= mind.title || '' %></h1>
-  <% if (mind.type_id === 'share') { %>
+  <% if (user && user.id && mind.creator_id.equals(user.id)) { %>
+  <div class="content-ctrl">
+    <a href="/mind/<%= mind._id %>/modify" class="button">编辑</a>
+  </div>
+  <% } %>
+  <!--<% if (mind.type_id === 'share') { %>
   <h2>—— 感悟 ——</h2>
   <% } else if (mind.type_id === 'help') { %>
   <h2>—— 烦恼 ——</h2>
-  <% } %>
-  <div class="content-viewer">
-    <%= mind.content || '' %>
-    <!--<a class="download-btn button" href="/">下载田野APP，结交知心朋友 -></a>-->
-  </div>
+  <% } %>-->
+  <div class="content-viewer"><%- mind.content || '' %><!--<a class="download-btn button" href="/">下载田野APP，结交知心朋友 -></a>--></div>
 </div>
 <!--<div class="ctrl-bar">
   <a href="/">

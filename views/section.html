@@ -1,5 +1,11 @@
 <% if (user) { %>
-<%- include(tempRoot + 'particles/crumbs.html', { right_btn: true, redirect: '/section/' + section._id + '/modify' }) %>
+<div class="crumbs">
+  <a href="/">首页</a>
+  <span class="crumbs-split"> > </span>
+  <a href="/classic/<%= section.classic && section.classic[0] && section.classic[0]._id || '' %>"><%= section.classic && section.classic[0] && section.classic[0].title || '' %></a>
+  <span class="crumbs-split"> > </span>
+  <span><%= section.title || '' %></span>
+</div>
 <% } %>
 <div class="content">
   <h1><%= section.title || '' %></h1>

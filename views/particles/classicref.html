@@ -1,26 +1,77 @@
 <blockquote>
   <% if (mind.title) { %>
-  <a href="/mind/<%= mind._id %>" class="title">
-    <%= mind.title || '' %>
-  </a>
-  <% } %>
-  <% if (mind.title || mind.quote) { %>
-  <p class="summary minor">
-    <%= mind.summary || '' %>
-  </p>
+  <a href="/mind/<%= mind._id %>" class="main-content<% if (mind.quote && mind.quote.poster) { %> quote<% } %>">
   <% } else { %>
-  <p class="summary">
-    <%= mind.summary || '' %>
-  </p>
+  <div class="main-content<% if (mind.quote && mind.quote.poster) { %> quote<% } %>">
   <% } %>
-  <% if (mind.quote) { %>
-  <a class="quote-bg" href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>">
-    <div class="pic" style="background-image: url('<%= mind.quote.poster || '' %>?imageMogr2/auto-orient|imageMogr2/quality/90!/thumbnail/180x220');"></div>
-    <div class="text">
-      <% if (mind.quote.title) { %>
-      <div class="quote-title"><%= mind.quote.title || '' %></div>
+    <% if (mind.title) { %>
+    <div class="more-mask"></div>
+    <div href="/mind/<%= mind._id %>" class="title">
+      <%= mind.title %>
+    </div>
+    <% } %>
+    <% if (mind.title) { %>
+    <p class="summary minor">
+      <%= mind.summary || '' %>
+    </p>
+    <% } else { %>
+    <p class="summary<% if (mind.quote && !mind.quote.poster) { %> lower<% } %>">
+      <%= mind.summary || '' %>
+    </p>
+    <% } %>
+    <% if (mind.quote) { %>
+    <% if (mind.quote.original_author || mind.quote.source) { %>
+    <div class="quote-info">
+      <% if (mind.quote.original_author) { %>
+      <span>原作者：<%= mind.quote.original_author %></span>
+      <% } %>
+      <% if (mind.quote.source) { %>
+      <span>来源：<%= mind.quote.source %></span>
       <% } %>
     </div>
+    <% } %>
+    <% if (!mind.quote.poster && (mind.quote.title || mind.quote.summary)) { %>
+    <% if (mind.quote.title) { %>
+    <a href="/classic/<%= mind.quote._id %>" class="quote-text">
+    <% } else { %>
+    <div class="quote-text">
+    <% } %>
+      <% if (mind.quote.title) { %>
+      <div class="more-mask"></div>
+      <div href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>" class="quote-title">
+        <%= mind.quote.title %>
+      </div>
+      <% } %>
+      <% if (mind.quote.summary) { %>
+      <p class="quote-summary<% if (mind.quote.title) { %> minor<% } %>">
+        <%= mind.quote.summary %>
+      </p>
+      <% } %>
+    <% if (mind.quote.title) { %>
+    </a>
+    <% } else { %>
+    </div>
+    <% } %>
+    <% } %>
+    <% } else if (mind.ref_type) { %>
+    <div class="not-exist">
+      推荐的内容不存在或被删除
+    </div>
+    <% } %>
+  <% if (mind.title) { %>
   </a>
+  <% } else { %>
+  </div>
+  <% } %>
+  <% if (mind.quote) { %>
+  <% if (mind.quote.poster) { %>
+  <a class="quote-bg" href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>">
+    <i class="iconfont icon-external-link-outline"></i>
+    <div class="pic" style="background-image: url('<%= mind.quote.poster || '' %>?imageMogr2/auto-orient|imageMogr2/quality/90!/thumbnail/180x220');"></div>
+    <% if (mind.quote.title) { %>
+    <div class="quote-title"><%= mind.quote.title || '' %></div>
+    <% } %>
+  </a>
+  <% } %>
   <% } %>
 </blockquote>

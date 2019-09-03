@@ -1,17 +1,28 @@
 <%- include(tempRoot + 'particles/crumbs.html') %>
 <% if (user) { %>
   <div class="editor">
+    <input style="display: none;" type="file"  accept="audio/mpeg" v-on:change="fileChange" ref="fileInput">
     <% if (section && section._id) { %>
       <form id="sectionForm" method="put"  action="/section/<%= section._id %> %>">
     <% } else { %>
       <form id="sectionForm" method="post" action="/classic/<%= classicId %>/section">
     <% } %>
       <div class="form-group">
-        <input name="title" placeholder="标题" value="<%= section && section.title || '' %>" />
+        <input type="text" name="title" placeholder="标题" value="<%= section && section.title || '' %>" />
       </div>
       <div class="form-group">
         <div id="editor" class="pell"></div>
         <textarea style="display: none;" id="html-output" name="content" rows="6" autofocus><%- section && section.content || '' %></textarea>
+      </div>
+      <div class="form-group">
+        <div class="file-upload">
+          <a class="button" href="javascript:;">
+            <i class="iconfont icon-musicbyinle"></i>
+            上传音频
+          </a>
+          <div style="display: none;" class="progress">上传进度：<span>0%</span></div>
+        </div>
+        <input type="hidden" name="audio" value="<%= section && section.audio || '' %>" />
       </div>
       <div class="bottom-bar">
         <button type="submit">

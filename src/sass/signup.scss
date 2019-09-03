@@ -1,4 +1,4 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
 button {
   line-height: 22px;
   &[type=submit] {
@@ -29,10 +29,8 @@ form {
   }
   .link {
     width: 100%;
-    line-height: 22px;
     padding: 10px;
     text-align: center;
-    font-size: 14px;
     display: block;
   }
 
@@ -45,13 +43,72 @@ form {
         button {
           margin-left: 10px;
           width: calc(100% - 10px);
-          /*!autoprefixer:off*/
-          width: -webkit-calc(100% - 10px);
-          width: -moz-calc(100% - 10px);
-          /*autoprefixer:on*/
-          width: -o-calc(100% - 10px);
         }
       }
+    }
+  }
+}
+
+.phone-input {
+  @extend %clearfix;
+  .select {
+    float: left;
+    position: relative;
+    width: 90px;
+    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-drag: none;
+    .select-input{
+      overflow: hidden;
+      span {
+        display: block;
+        float: left;
+      }
+      i {
+        display: block;
+        transform: rotate(-90deg);
+        float: right;
+      }
+    }
+    .dropdown {
+      transition: all .15s ease-in-out;
+      transform: translateY(10px);
+      opacity: 0;
+      visibility: hidden;
+      padding: 10px 0;
+      position: absolute;
+      z-index: 999;
+      background-color: white;
+      box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.1);
+      top: 44px;
+      left: 0;
+      border-radius: 3px;
+      line-height: 36px;
+      width: 150px;
+      height: 200px;
+      overflow: auto;
+      li {
+        padding: 0 10px;
+        &:hover {
+          background-color: #fafafa;
+        }
+      }
+      &.visible {
+        transition: all .15s ease-in-out;
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+  }
+  label {
+    float: left;
+    width: calc(100% - 100px);
+    margin-left: 10px;
+    input {
+      width: 100%;
+      box-sizing: border-box;
     }
   }
 }

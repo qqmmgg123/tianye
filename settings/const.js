@@ -7,6 +7,7 @@ const constant = {
   // 页面title
   SITE_SIGNIN_PAGE: '登录',
   SITE_SIGNUP_PAGE: '注册',
+  SITE_ABOUT_PAGE: '关于我们',
 
   // 表单提示语
   DIARY_HOLDER: '记录点滴心语...',
@@ -112,9 +113,13 @@ const constant = {
       name: '句子',// '鸡汤句子',
       id: 'sentence'
     },
-    LITERATURE: {
+    ARTICLE: {
       name: '文章',// '散文诗歌',
-      id: 'literature'
+      id: 'article'
+    },
+    WORKS: {
+      name: '文章',// '散文诗歌',
+      id: 'works'
     },
   },
 
@@ -124,6 +129,39 @@ const constant = {
   // 默认图片
   DEFAULT_IMAGE: 'https://tianyeapp.top/static/images/logo_tianye.png',
   SUMMARY_LIMIT: 150,
+
+  // 区号
+  AREA_CODE: {
+    CN: '86',
+    TW: '886',
+    HK: '852',
+    MO: '853',
+    JP: '81',
+    KR: '82',
+    SG:  '65',
+    TH: '66',
+    MY: '60',
+    US: '1',
+    CA: '1',
+    AU: '61',
+    GB: '44',
+    DE: '49',
+    FR: '33',
+    RU: '7',
+    IN: '91',
+    NZ: '64',
+    IT: '39',
+    NL: '31',
+    ES: '34',
+    SE: '46',
+    AT: '43',
+    CH: '41',
+    LT: '370',
+    PH: '63',
+    ID: '62',
+    VN: '84',
+    AE: '971',
+  }
 }
 
 // 输出模块

@@ -2,9 +2,11 @@
   <a class="menu <%= ['classics.html', 'classic.html', 'section.html'].indexOf(particles) !== -1 ? ' active' : '' %>" href="/">
     首页
   </a>
+  <a class="menu <%= ['about.html'].indexOf(particles) !== -1 ? ' active' : '' %>" href="/about">
+    关于我们
+  </a>
   <!--<a class="menu download-btn<%= particles === 'index.html' ? ' active' : '' %>" href="/appdownload">APP下载</a>-->
   <% if (user) { %>
-  <!--<a class="menu" href="/config">设置</a>-->
   <a class="menu user" href="/mind"><%= user.nickname %></a>
   <span class="separator">·</span>
   <a class="menu logout" href="/logout">登出</a>

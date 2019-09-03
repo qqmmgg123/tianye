@@ -1,8 +1,15 @@
 const crypto = require('crypto')
 , semver = require('semver')
 , fs = require('fs')
+, striptags = require('./striptags')
 
 module.exports = {
+  clearFormat: function(html) { 
+    return html 
+    ? striptags(html).replace(/^[(\&nbsp\;)\s\uFEFF\xA0]+|[(\&nbsp\;)\s\uFEFF\xA0]+$/g, '') 
+        .replace(/&nbsp;/g, ' ')
+    : ''
+  },
   readData: function(path){
     return new Promise(function(resolve,reject){
       fs.readFile(path,function(err,data){

@@ -1,47 +1,102 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
+@import './particles/audioplay.scss';
+.crumbs {
+  margin-top: 20px;
+}
 .content {
   h1 {
     font-size: 24px;
+    line-height: 42px;
     text-align: center;
     font-weight: 500;
+    margin-top: 30px;;
   }
+
+  .content-header {
+    overflow: hidden;
+    margin-top: 20px;
+    .poster {
+      width: 90px;
+      height: 110px;
+      float: left;
+    }
+    .content-info {
+      float: left;
+      margin-left: 20px;
+      h1 {
+        text-align: left;
+        margin-top: 0;
+      }
+      .info-more > span {
+        margin-right: 20px;
+        font-size: 14px;
+      }
+    }
+    .content-ctrl {
+      margin-top: 10px;
+      > .button-area {
+        > a.button {
+          float: left;
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+
   blockquote {
-    margin-top: 10px;
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 15px;
-    padding-top: 10px;
-    padding-right: 10px;
-    padding-bottom: 10px;
-    border-left: 3px solid #ccc;
-    background-color:#f1f1f1;
+    margin-top: 20px;
+    padding: 5px 10px;
+    border-left: 2px solid #dddddd;
     position: relative;
     font-size: 14px;
     color: lighten($gray, 60%);
   }
-  
-  blockquote::before{
-    content: "\201C";
+
+  .more-mask {
+    background-image: linear-gradient(-180deg,rgba(255,255,255,0) 0,#fff 100%);
     position: absolute;
-    font-size: 14px;
-    left: 5px;
-    top: 10px;
+    height: 150px;
+    width: 100%;
   }
 
   .content-viewer {
     font-size: 16px;
-    margin-top: 10px;
+    margin-top: 20px;
+    line-height: 36px;
+    word-wrap: break-word;
   }
 }
 
 #sections.list {
   padding: 0;
-  .item > a {
-    font-size: 16px;
-    line-height: 24px;
-    padding: 10px 0;
-    display: block;
-    color: #333333;
-    font-weight: 500;
+  .item {
+    overflow: hidden;
+    > a {
+      float: left;
+      font-size: 16px;
+      line-height: 24px;
+      padding: 10px 0;
+      display: block;
+      color: #333333;
+      font-weight: 500;
+    }
+    .section-ctrl {
+      float: right;
+      a {
+        padding: 10px;
+        line-height: 24px;
+        color: #999999;
+        display: block;
+        float: left;
+        .iconfont {
+          margin-right: 6px;
+          font-size: 12px;
+        }
+      }
+    }
   }
+}
+
+.pagination {
+  margin-top: 20px;
 }

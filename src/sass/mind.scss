@@ -1,13 +1,12 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
 
 .content {
   h1 {
-    color: #333333;
-    font-size: 20px;
+    font-size: 24px;
     line-height: 42px;
     text-align: center;
-    font-weight: normal;
-    margin-top: 20px;
+    font-weight: 500;
+    margin-top: 30px;
   }
   h2 {
     color: #999999;
@@ -17,23 +16,14 @@
     font-weight: normal;
   }
   .content-viewer {
-    color: #333333;
     font-size: 16px;
-    margin-top: 10px;
+    margin-top: 20px;
     line-height: 36px;
-    padding-bottom: 120px;
-    white-space: pre-wrap;
     word-wrap: break-word;
-    .download-btn {
-      margin-top: 20px;
-      text-align: center;
-      max-width: $viewWidth - 20;
-      width: calc(100% - 20px);
-      /*!autoprefixer:off*/
-      width: -webkit-calc(100% - 20px);
-      width: -moz-calc(100% - 20px);
-      /*autoprefixer:on*/
-      width: -o-calc(100% - 20px);
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 15px auto;
     }
   }
 }
@@ -60,10 +50,6 @@
     margin-left: $viewWidth / 2 + 10;
     top: 50%;
     transform: translateY(-50%);
-    /*!autoprefixer:off*/
-    -webkit-transform: translateY(-50%);
-    -ms-transform: translateY(-50%);
-    /*autoprefixer:on*/
     > a {
       margin-top: 10px; 
       cursor: pointer;
@@ -92,19 +78,9 @@
   }
   .main {
     height: calc(100% - 42px);
-    /*!autoprefixer:off*/
-    height: -webkit-calc(100% - 42px);
-    height: -moz-calc(100% - 42px);
-    /*autoprefixer:on*/
-    height: -o-calc(100% - 42px);
   }
   .content {
     height: calc(100% - 52px);
-    /*!autoprefixer:off*/
-    height: -webkit-calc(100% - 52px);
-    height: -moz-calc(100% - 52px);
-    /*autoprefixer:on*/
-    height: -o-calc(100% - 52px);
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     overflow: auto;
@@ -117,8 +93,6 @@
     height: 52px;
     line-height: 52px;
     overflow: hidden;
-    color: white;
-    /* border-top: 1px solid lighten($gray, 90%); */
     color: white;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
     background-color: white;

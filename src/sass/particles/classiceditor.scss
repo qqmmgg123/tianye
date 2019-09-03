@@ -12,9 +12,8 @@
         border-radius: 3px;
       }
     }
-    input, textarea, .rich-textarea {
+    input[type=text], textarea, .rich-textarea {
       width: 100%;
-      /*max-width: 360px;*/
       box-sizing: border-box;
     }
     textarea {
@@ -28,7 +27,9 @@
     display: flex;
     align-items: center;
     width: 100%;
-    /*max-width: 360px;*/
+    button {
+      margin-right: 20px;
+    }
     .info-tips {
       flex: 1;
     }
@@ -52,8 +53,14 @@
     }
   }
   .pell {
-    button {
-      margin-right: 10px;
+    .action-bar {
+      .action-button {
+        margin-right: 10px;
+      }
+      .action-button-selected {
+        border-color: $cherryRed;
+        color: $cherryRed;
+      }
     }
   }
 }

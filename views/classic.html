@@ -1,21 +1,61 @@
 
-<% if (user) { %>
-<div class="content-header">
-  <div class="button-area">
-    <a href="/classic/<%= classic._id %>/modify" class="button">编辑</a>
-    <a 
-      href="javascript:;" 
-      class="button"
-      rel-ctl="classic-remove"
-      data-id="<%= classic._id %>" 
-    >删除</a>
-    <a href="/classic/<%= classic._id %>/section/create" class="button">添加章节</a>
-  </div>
+<% if (classic) { %>
+<div class="crumbs">
+  <a href="/">首页</a><span class="crumbs-split"> > </span><span><%= classic.title || '' %></span>
 </div>
-<hr>
-<% } %>
 <div class="content">
-  <h1><%= classic.title || '' %></h1>
+  <% if (classic.column_id === 'works') { %>
+  <div class="content-header">
+    <% if (classic.poster) { %>
+    <div class="poster" style="background-image: url(<%= classic.poster %>);"></div>
+    <% } %>
+    <div class="content-info">
+    <% if (classic.title) { %>
+    <h1><%= classic.title %></h1>
+    <% } %>
+    <div class="info-more">
+    <% if (classic.original_author) { %>
+    <span>原作者：<%= classic.original_author %></span>
+    <% } %>
+    <% if (classic.source) { %>
+    <span>来源：<%= classic.source %></span>
+    <% } %>
+    </div>
+    <% if (user && user.id && classic.creator_id.equals(user.id)) { %>
+    <div class="content-ctrl">
+      <div class="button-area">
+        <a href="/classic/<%= classic._id %>/modify" class="button">编辑</a>
+        <a 
+          href="javascript:;" 
+          class="button"
+          rel-ctl="classic-remove"
+          data-id="<%= classic._id %>" 
+        >删除</a>
+        <a href="/classic/<%= classic._id %>/section/create" class="button">添加章节</a>
+      </div>
+    </div>
+    <% } %>
+    </div>
+  </div>
+  <% } else { %>
+  <% if (classic.title) { %>
+  <h1><%= classic.title %></h1>
+  <% if (user && user.id && classic.creator_id.equals(user.id)) { %>
+  <div class="content-ctrl">
+    <div class="button-area">
+      <a href="/classic/<%= classic._id %>/modify" class="button">编辑</a>
+      <a 
+        href="javascript:;" 
+        class="button"
+        rel-ctl="classic-remove"
+        data-id="<%= classic._id %>" 
+      >删除</a>
+      <a href="/classic/<%= classic._id %>/section/create" class="button">添加章节</a>
+    </div>
+  </div>
+  <% } %>
+  <% } %>
+  <% } %>
   <blockquote>
     <%= classic.mind && (classic.mind.content || (classic.mind[0] && classic.mind[0].content)) || '' %>
   </blockquote>
@@ -26,8 +66,17 @@
   <ol id="sections" class="list">
     <% sections.forEach((section) => { %>
     <li class="item fade">
-      <a href="/section/<%= section._id %>"><%= section.title || '' %></a>
-      <div class="bottom-bar">
+      <a class="section-title" href="/section/<%= section._id %>"><%= section.title || '' %></a>
+      <div class="section-ctrl">
+        <% if (section.audio) { %>
+          <a 
+            rel-ctl="section-play"
+            data-id="<%= section._id %>" 
+            href="javascript:;">
+            <i class="iconfont icon-bofang"></i>
+            播放
+          </a>
+        <% } %>
         <% if (user && user._id) { %>
           <% if (section.creator_id.toString() === user._id.toString()) { %>
             <a href="/section/<%= section._id %>/modify">
@@ -49,3 +98,9 @@
   </ol>
   <% } %>
 </div>
+<% } else { %>
+  <div class="content">
+    <h1>: ( 您访问的内容不存在~</h1>
+  </div>
+<% } %>
+<div id='player' style="display: none;"></div>

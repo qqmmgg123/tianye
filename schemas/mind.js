@@ -49,9 +49,18 @@ let mindSchema = new Schema({
   // 引用类型
   ref_type: {
     type: String,
-    enum: ['mind', 'classic'],
-    trim: true
+    enum: ['mind', 'classic']
   },
+  // 引用书写类型
+  ref_column: { 
+    type: String,
+    enum: ['sentence', 'article', 'works']
+  },
+  // 关键词
+  keywords:[{
+    type: String,
+    trim: true
+  }],
   // 创建者id
   creator_id: { 
     type: Schema.Types.ObjectId,
@@ -60,9 +69,14 @@ let mindSchema = new Schema({
       constant.MISS_PARAMS
     ],
   },
+  poster: { 
+    type: String,
+    trim: true
+  },
   // 书写类型
   column_id: { 
     type: String,
+    enum: ['sentence', 'article', 'works'],
     required: [
       true, 
       constant.MISS_PARAMS
@@ -96,23 +110,6 @@ let mindSchema = new Schema({
     type: Date, 
     default: Date.now
   },
-})
-
-mindSchema.pre('validate', async function() {
-  this.title && (this.title = this.title.replace(/\r|\n|\t/gi, ''))
-  if (!this.perm_id) {
-    switch (this.type_id) {
-      case 'diary':
-        this.perm_id = 'me'
-        break
-      case 'help':
-        this.perm_id = 'friend'
-        break
-      case 'share':
-        this.perm_id = 'all'
-        break
-    }
-  }
 })
 
 module.exports = mindSchema

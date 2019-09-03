@@ -3,13 +3,7 @@ const mongoose = require('mongoose')
 , constant = require('../settings/const')
 
 Classic.statics.extract = function(content) {
-  let str  = content && content
-  .replace(/\<[^\<\>]+\>/gm, '')
-  .replace(/(\s|\r|\n|\t)+/gm, '')
-  .replace(/&[^&;]+;/gm, '') || ''
-  , l = constant.SUMMARY_LIMIT - 3
-  , is_extract = str.length > l
-  return is_extract ? str.slice(0, l) + '...' : str
+  return content.slice(0, constant.SUMMARY_LIMIT - 3) + '...'
 }
 
 module.exports = mongoose.model('Classic', Classic)

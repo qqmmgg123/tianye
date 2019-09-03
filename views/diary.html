@@ -4,14 +4,11 @@
   <li class="item fade">
     <%- include(tempRoot + 'particles/classicref.html', { mind }) %>
     <div class="bottom-bar">
-      <span class="datetime"><%= dateFormat(mind.created_date) %></span>
+      <span class="datetime"><%= dateFormat(mind.state_change_date) %></span>
       <% if (user && user.id && mind.creator_id.equals(user.id)) { %>
       <div class="right-ctrl">
         <a 
-        rel-ctl="diary-remove"
-        data-hiding="false"
-        data-id="<%= mind._id %>" 
-        href="javascript:;">
+        href="/mind/<%= mind._id %>/modify">
           编辑
         </a>
         <a 
@@ -29,7 +26,7 @@
   <% }) %>
   <% } else { %>
     <li>
-      <center><%= noDataTips %></center>
+      <center>抱歉，发文和推文功能正在升级中...，不久将会开放，敬请谅解。</center>
     </li>
   <% } %>
   <%- include(tempRoot + 'particles/pagination.html') %>

@@ -4,10 +4,19 @@ const constant = require('../settings/const')
 let classicSchema = new Schema({
   title: { 
     type: String, 
-    required: [true, constant.MISS_PARAMS], 
     trim: true
   },
   summary: { 
+    type: String, 
+    required: [true, constant.MISS_PARAMS],
+    trim: true
+  },
+  original_author: {
+    type: String, 
+    required: [true, constant.MISS_PARAMS],
+    trim: true
+  },
+  source: {
     type: String, 
     required: [true, constant.MISS_PARAMS],
     trim: true
@@ -18,10 +27,17 @@ let classicSchema = new Schema({
     trim: true
   },
   poster: { 
-    type: String, 
-    required: [true, constant.MISS_PARAMS], 
-    default: constant.DEFAULT_IMAGE,
+    type: String,
     trim: true
+  },
+  // 书写类型
+  column_id: { 
+    type: String,
+    enum: ['sentence', 'article', 'works'],
+    required: [
+      true, 
+      constant.MISS_PARAMS
+    ],
   },
   creator_id: Schema.Types.ObjectId,
   mind_id: Schema.Types.ObjectId,

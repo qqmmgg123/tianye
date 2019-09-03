@@ -20,11 +20,6 @@ let userSchema = new Schema({
     required: [true, constant.NICKNAME_REQUIRED],
     maxlength: [24, constant.NICKNAME_MAXLEN_ERROR]
   },
-  email: { 
-    type: String, 
-    unique: true, 
-    trim: true
-  },
   hash: { type: String, select: false },
   salt: { type: String, select: false },
   joinedDate: {

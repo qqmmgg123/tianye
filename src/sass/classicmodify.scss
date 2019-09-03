@@ -1,10 +1,11 @@
-@import 'common.scss';
+@import '@/sass/common/common.scss';
 @import './particles/classiceditor.scss';
 
 /* public */
 .tips {
   line-height: 22px;
   padding: 10px 0;
+  color: $cherryRed;
 }
 
 .file-upload {

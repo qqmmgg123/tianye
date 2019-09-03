@@ -1,5 +1,4 @@
-import { striptags } from './striptags'
-
+import { striptags } from '@/js/lib/striptags'
 const defaultParagraphSeparatorString = 'defaultParagraphSeparator'
 const formatBlock = 'formatBlock'
 const addEventListener = (parent, type, listener) => parent.addEventListener(type, listener)
@@ -34,6 +33,12 @@ const defaultActions = {
     title: 'Strike-through',
     state: () => queryCommandState('strikeThrough'),
     result: () => exec('strikeThrough')
+  },
+  center: {
+    icon: '<strike> - </strike>',
+    title: 'justifyCenter',
+    state: () => queryCommandState('justifyCenter'),
+    result: () => exec('justifyCenter')
   },
   heading1: {
     icon: '<b>H<sub>1</sub></b>',
@@ -117,28 +122,49 @@ export const init = settings => {
 
   const actionbar = createElement('div')
   actionbar.className = classes.actionbar
+  actionbar.style.display = 'none'
   appendChild(settings.element, actionbar)
 
+  const editor = createElement('div')
+  editor.style.position = 'relative'
+  appendChild(settings.element, editor)
+
   const content = settings.element.content = createElement('div')
+  const placeholder = createElement('span')
+  const covertText = (text) => text.replace(/([^\n]+)\n/g, '<p>$1</p>')
+  .replace(/\n/g, '<p><br></p>')
+  .replace(/\s/g, '&nbsp;')
+  const togglePlaceholder = () => {
+     placeholder.style.display = content.innerHTML ? 'none' : ''
+  }
   content.contentEditable = true
   content.className = classes.content
-  content.oninput = ({ target: { firstChild } }) => {
+  const initialHtml = settings.initialHtml || ''
+  content.innerHTML = initialHtml !== striptags(initialHtml) 
+  ? initialHtml
+  : covertText(initialHtml)
+  togglePlaceholder()
+  settings.onChange(content.innerHTML)
+  content.oninput = async (event) => {
+    let res = await settings.onPreInput(content.innerHTML)
+    if (res.needAsk) content.innerHTML = res.html
+    let { firstChild } = event.target
     if (firstChild && firstChild.nodeType === 3) exec(formatBlock, `<${defaultParagraphSeparator}>`)
     else if (content.innerHTML === '<br>') content.innerHTML = ''
+    togglePlaceholder()
     settings.onChange(content.innerHTML)
   }
   content.onpaste = (event) => {
     // cancel paste
     event.preventDefault();
-
-    // get text representation of clipboard
-    // var text = (e.originalEvent || e).clipboardData.getData('text/plain');
     event = (event.originalEvent || event)
     let text = ''
     if (/text\/html/.test(event.clipboardData.types)) {
-      text = striptags(event.clipboardData.getData('text/html'), ['div', 'p'])
+      let html = event.clipboardData.getData('text/html')
+      // text = striptags(html, ['div', 'p', 'h1', 'h2', 'ol', 'ul', 'li'])
+      text = html
     } else if (/text\/plain/.test(event.clipboardData.types)) {
-      text = event.clipboardData.getData('text/plain').replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;')
+      text = covertText(event.clipboardData.getData('text/plain'))
     }
     // insert text manually
     exec('insertHTML', text)
@@ -148,7 +174,18 @@ export const init = settings => {
       setTimeout(() => exec(formatBlock, `<${defaultParagraphSeparator}>`), 0)
     }
   }
-  appendChild(settings.element, content)
+  // placeholder
+  placeholder.innerHTML = settings.placeholder
+  placeholder.style.position = 'absolute'
+  placeholder.style.top = '11px'
+  placeholder.style.left = '11px'
+  placeholder.style.color = '#999999'
+  placeholder.onmousedown = (event) => {
+    event.preventDefault()
+    content.focus()
+  }
+  appendChild(editor, content)
+  appendChild(editor, placeholder)
 
   actions.forEach(action => {
     const button = createElement('button')
@@ -171,7 +208,19 @@ export const init = settings => {
   if (settings.styleWithCSS) exec('styleWithCSS')
   exec(defaultParagraphSeparatorString, defaultParagraphSeparator)
 
-  return settings.element
+  return {
+    actionbarShow: false,
+    showActionBar() {
+      if (this.actionbarShow) return
+      actionbar.style.display = ''
+      this.actionbarShow = true
+    },
+    hideActionBar() {
+      if (!this.actionbarShow) return
+      actionbar.style.display = 'none'
+      this.actionbarShow = false
+    }
+  }
 }
 
 export default { exec, init }

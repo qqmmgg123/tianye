@@ -18,6 +18,7 @@ const mongoose = require('mongoose')
 const User = require('./models/user')
 const Verification = require('./models/verification')
 const Mind = require('./models/mind')
+const Keyword = require('./models/keyword')
 const FeatureVisitor = require('./models/feature_visitor')
 const Visitor = require('./models/visitor')
 const Version = require('./models/version')
@@ -27,7 +28,7 @@ const Translate = require('./models/translate')
 const Reply = require('./models/reply')
 const Friend = require('./models/friend')
 const session = require('koa-session')
-const { filterMsg, pageRange, getDate, pbkdf2 } = require('./utils')
+const { pageRange, getDate, pbkdf2, clearFormat } = require('./utils')
 const crypto = require('crypto')
 const path = require('path')
 const { staticDir } = require('./config/remotepath')
@@ -36,8 +37,8 @@ const utils = require('./utils')
 const signature = require('./signature')
 const qiniu = require('qiniu')
 const formidable = require('formidable')
-
-const Core = require('@alicloud/pop-core');
+// 阿里短信服务框架
+const Core = require('@alicloud/pop-core')
 
 // 创建一个短信服务器
 const client = new Core({
@@ -49,19 +50,32 @@ const client = new Core({
 
 const app = new Koa()
 const router = new Router()
-
 const port = process.env.PORT || 3000
-const dbLink = process.env.DBLINK || 'mongodb://localhost:27018/tianye'
-
-//连接mongodb 数据库 ，地址为mongodb的地址以及集合名称。
-mongoose.Promise = global.Promise;
-mongoose.set('useCreateIndex', true)
-mongoose.connect(dbLink, { useNewUrlParser: true })
 
 if (process.env.NODE_ENV === 'production') {
   // Force HTTPS on all page
   app.use(enforceHttps())
+} else {
+  const webpack = require('webpack')
+  const { koaDevMiddleware, koaHotMiddleware } = require('./hmr')
+  const webpackDevConfig = require('./webpack.config.dev')
+  const webpackCompiler = webpack(webpackDevConfig)
+
+  app.use(koaDevMiddleware(webpackCompiler, {
+    noInfo: true,
+    publicPath: webpackDevConfig.output.publicPath
+  }))
+  app.use(koaHotMiddleware(webpackCompiler, {
+    path: '/__webpack_hmr',
+    heartbeat: 10 * 1000,
+  }))
 }
+
+//连接mongodb 数据库 ，地址为mongodb的地址以及集合名称。
+const dbLink = process.env.DBLINK || 'mongodb://localhost:27018/tianye'
+mongoose.Promise = global.Promise;
+mongoose.set('useCreateIndex', true)
+mongoose.connect(dbLink, { useNewUrlParser: true, useFindAndModify: false })
 
 // trust proxy
 app.proxy = true
@@ -110,7 +124,8 @@ app.use(bodyParser({
 app.use((ctx, next) => {
   let user = ctx.cookies.request.user
   let cssExt = 'css'
-  ctx.is_wechat = false
+  ctx.state.env = process.env.NODE_ENV
+  ctx.state.is_wechat = false
   ctx.state.need_auto_script = true
   ctx.state.need_dom4_script = true
   ctx.state.need_global_script = true
@@ -141,6 +156,7 @@ router.get([
   '/user/search',
   '/help/:id',
   '/recommend/helps',
+  '/mind/create',
   '/mind/:id/modify',
   '/classic/create',
   '/classic/:id/modify',
@@ -176,6 +192,7 @@ router.use([
   '/nickname',
   '/password',
   '/uploadImg',
+  '/uploadAudio',
 ], (ctx, next) => {
   let { method } = ctx.request
   if ([
@@ -237,10 +254,9 @@ router.get('/login', async (ctx) => {
   ctx.session.currentFormUrl = '/login'
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.SITE_SIGNIN_PAGE,
       constant.APP_NAME, 
-      constant.SITE_SIGNIN_PAGE
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   const info = ctx.session.info
@@ -351,10 +367,9 @@ router.get('/signup', async (ctx) => {
   ctx.session.currentFormUrl = '/signup'
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.SITE_SIGNUP_PAGE,
       constant.APP_NAME, 
-      constant.SITE_SIGNUP_PAGE
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   await ctx.fullRender('signup', {
@@ -363,10 +378,6 @@ router.get('/signup', async (ctx) => {
     nicknameHolder: constant.NICKNAME_HOLDER,
     passwordHolder: constant.PASSWORD_HOLDER,
     phoneHolder: constant.PHONE_HOLDER,
-    nickname: '',
-    password: '',
-    phone: '',
-    code: '',
     info: ctx.session.info
   })
 
@@ -385,10 +396,9 @@ router.post('/signup', async (ctx, next) => {
   nickname = nickname.trim()
   phone = phone.trim()
   code = code.trim()
-
   let vcode = await Verification.findOne({ 
-    phone: phone,
-    code: code
+    phone,
+    code
   }, 'phone code').lean()
 
   if (!vcode) {
@@ -426,12 +436,12 @@ router.post('/signup', async (ctx, next) => {
     await User.create({
       username: phone,
       nickname : nickname,
-      phone: phone,
+      phone,
       hash: new Buffer(hash, 'binary').toString('hex'),
       salt: salt
     })
     await Verification.deleteOne({ 
-      phone: phone,
+      phone,
       code: code
     })
     let loginRes = await loginPromise(ctx, 'local')
@@ -463,11 +473,17 @@ router.post('/signup', async (ctx, next) => {
 
 // 发送验证码
 router.post('/phone/vcode',async (ctx)=>{
-  let { 
+  let {
     phone = '',
+    phone_number = '',
+    country = '',
     type
   } = ctx.request.body
   phone = phone.trim()
+  phone_number = phone_number.trim()
+  country = country.trim()
+  // 是否为国际
+  const isForeign = country !== 'CN'
 
   // 参数错误
   if (!type) {
@@ -480,7 +496,9 @@ router.post('/phone/vcode',async (ctx)=>{
 
   // 注册需要验证用户是否已经被注册
   if (type === 'signup') {
-    let user = await User.findOne({ phone }, 'phone').lean()
+    let user = await User
+    .findOne({ phone }, 'phone')
+    .lean()
     if (user) {
       ctx.body = {
         success: false,
@@ -491,7 +509,9 @@ router.post('/phone/vcode',async (ctx)=>{
   }
 
   let code = ''
-  let verification = await Verification.findOne({ phone }, 'code').lean()
+  let verification = await Verification
+  .findOne({ phone }, 'code')
+  .lean()
   if (verification && verification.code) {
     code = verification.code
   } else {
@@ -502,7 +522,11 @@ router.post('/phone/vcode',async (ctx)=>{
   // 保存匹配验证码记录
   await Verification.updateOne(
     { phone },
-    { $set: { phone, code, createdAt: new Date() }},
+    { $set: { 
+      phone, 
+      code, 
+      createdAt: new Date() 
+    }},
     { 
       runValidators: true,
       upsert: true
@@ -521,24 +545,27 @@ router.post('/phone/vcode',async (ctx)=>{
     let templateCode = ''
     switch(type) {
       case 'signup':
-        templateCode = "SMS_166095220"
+        templateCode = isForeign ? "SMS_173341730" : "SMS_173341738"
         break
       case 'login':
-        templateCode = "SMS_166080257"
+        templateCode = isForeign ? "SMS_173346747" : "SMS_173341739"
         break
       case 'reset':
-        templateCode = "SMS_166080267"
+        templateCode = isForeign ? "SMS_173346746" : "SMS_166080267"
         break
     }
+    let fullPhone = phone.split('-').join('')
     let params = {
       "RegionId": "cn-hangzhou",
-      "PhoneNumbers": phone,
-      "SignName": "田野APP",
+      "PhoneNumbers": isForeign ? fullPhone : phone_number,
+      "SignName": "田野耘心",
       "TemplateCode": templateCode,
       "TemplateParam": JSON.stringify({
         code: code
       })
     }
+
+    // if (isForeign) params.CountryCode = country 
     
     var requestOption = {
       method: 'POST'
@@ -559,6 +586,7 @@ router.post('/phone/vcode',async (ctx)=>{
 // 记录当前页面url状态
 router.get([
   '/',
+  'about',
   '/appdownload',
   '/mind/:id',
   '/karma/fate',
@@ -576,10 +604,9 @@ router.get([
 router.get('/classic', async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      '网友推荐',
       constant.APP_NAME, 
-      '网友推荐'
     ].join('——'),
-    is_wechat: false,
   })
 
   // 分页
@@ -620,7 +647,7 @@ router.get('/classic', async (ctx, next) => {
   let classics = await Classic.find({})
     .select('_id title poster summary creator_id mind_id updated_date')
     .populate('author', 'nickname')
-  .populate('mind', 'content')
+    .populate('mind', 'content')
     .sort({ updated_date: -1 })
     .skip(skip)
     .limit(limit)
@@ -641,10 +668,22 @@ router.get('/classic', async (ctx, next) => {
 })
 
 // app下载页
+router.get('/about', (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [ constant.SITE_ABOUT_PAGE, constant.APP_NAME, ].join('——'),
+    need_auto_script: false,
+    need_global_script: false
+  })
+
+  return ctx.fullRender('about', {
+    appName: constant.APP_NAME
+  })
+})
+
+// app下载页
 router.get('/appdownload', (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: constant.APP_NAME,
-    is_wechat: false
   })
 
   return ctx.fullRender('index', {
@@ -1027,8 +1066,8 @@ router.get('/profile/:id', async (ctx, next) => {
 router.get('/user/search', async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
     ].join('——')
   })
 
@@ -1122,10 +1161,9 @@ router.get('/mind', async (ctx, next) => {
 
   // 标题和其他配置信息
   ctx.state = Object.assign(ctx.state, { 
-    title: [ constant.APP_NAME,  nickname].join('——'),
+    title: [ nickname, constant.APP_NAME, ].join('——'),
     description: constant.APP_SLOGAN,
-    keywords: constant.SITE_KEWWORDS,
-    is_wechat: false,
+    keywords: constant.SITE_KEWWORDS
   })
 
   // 分页
@@ -1137,7 +1175,8 @@ router.get('/mind', async (ctx, next) => {
   let index = range / 2
   let lastIndex = range - index
   let condition = {
-    creator_id: user._id
+    creator_id: user._id,
+    type_id: 'share'
   }
 
   // 心念总数
@@ -1280,8 +1319,7 @@ router.get(['/', '/earth'], async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: constant.APP_NAME,
     description: constant.APP_SLOGAN,
-    keywords: constant.SITE_KEWWORDS,
-    is_wechat: false,
+    keywords: constant.SITE_KEWWORDS
   })
 
   // 分页
@@ -1295,41 +1333,56 @@ router.get(['/', '/earth'], async (ctx, next) => {
 
   // 分类
   let tag = query.tag
+  , keywords = query.keywords && query.keywords.trim() || ''
   , matchCon = {
     type_id: 'share'
   }
 
-  if (tag && tag === 'works') {
-    matchCon.ref_type = 'classic'
+  if (tag) {
+    if (tag === 'sentence') {
+      matchCon.$or = [
+        {
+          $and: [
+            { column_id: tag },
+            { ref_id: null }
+          ],
+        }, {
+          $and: [
+            { ref_column: tag },
+            { ref_id: { '$ne': null } }
+          ],
+        }
+      ]
+    } else {
+      matchCon.$or = [
+        { column_id: tag },
+        { ref_column: tag }
+      ]
+    }
   }
 
-  if (tag && tag === 'article') {
-    matchCon.$and = [
-      {
-        'title': { '$ne': '' }
-      }, {
-        'title': { '$ne': null }
-      }, { 
-        'ref_type': { '$ne': 'classic' } 
+  // 关键词和内容类别
+  if (keywords) {
+    matchCon.keywords = keywords
+  }
+
+  // 查询类别
+  const keywordList = await Keyword.aggregate([
+    { 
+      $group: { 
+        _id: '$name', 
+        total: { $sum: 1 } 
+      } 
+    },
+    { $project: { 
+      _id: 1,
+      total: 1, 
+      order: { 
+        $cond : [ { $eq : ['$_id', keywords] }, 1 , 0 ]
       }
-    ]
-  }
-
-  if (tag && tag === 'other') {
-    matchCon.$and = [
-      {
-        $or: [
-          {
-            'title': { '$eq': '' }
-          }, {
-            'title': { '$eq': null }
-          }
-        ]
-      },
-      { 'ref_type': { '$ne': 'classic' } }
-    ]
-  }
-
+    }},
+    { $sort: { order: -1, total: -1, createdAt: -1 } },
+  ])
 
   // 心念总数
   let total = await Mind.countDocuments(matchCon)
@@ -1351,6 +1404,7 @@ router.get(['/', '/earth'], async (ctx, next) => {
       'content': 1, 
       'is_extract': 1, 
       'summary': 1, 
+      'keywords': 1,
       'perm_id': 1,
       'behalf': 1,
       'quote_mind': { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
@@ -1407,6 +1461,11 @@ router.get(['/', '/earth'], async (ctx, next) => {
     ]
   }
 
+  // 关键词和类别
+  if (keywords) {
+    condition.unshift({ $unwind: "$keywords" })
+  }
+
   let minds = await Mind.aggregate(
     condition
   )
@@ -1450,8 +1509,10 @@ router.get(['/', '/earth'], async (ctx, next) => {
     slogan: constant.APP_SLOGAN,
     features: constant.FEATURES,
     noDataTips: constant.NO_CLASSICS,
-    currTag: tag,
+    currTag: tag || '',
+    currKeyword: keywords || '',
     pageInfo,
+    keywordList,
     minds
   })
 })
@@ -2157,6 +2218,33 @@ router.get('/recommend/helps', async (ctx, next) => {
   }
 })
 
+// 感悟创建页
+router.get('/mind/create', async (ctx, next) => {
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      '分享感悟',
+      constant.APP_NAME, 
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 返回并渲染首页
+  await ctx.fullRender('classicmodify', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    shareHolder: constant.SHARE_HOLDER,
+    features: constant.FEATURES,
+    columns: constant.COLUMNS,
+    backPage: '/',
+    mind: null,
+    info
+  })
+
+  ctx.session.info = null
+})
+
 // 尘心念展示
 router.get('/mind/:id', async (ctx, next) => {
   let mindId = ctx.params.id
@@ -2178,6 +2266,7 @@ router.get('/mind/:id', async (ctx, next) => {
         quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
         perm_id: 1,
         behalf: 1,
+        creator_id: 1,
         state_change_date: 1
       } },
       { $unwind: '$quote_mind' },
@@ -2192,6 +2281,7 @@ router.get('/mind/:id', async (ctx, next) => {
         quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         perm_id: 1,
         behalf: 1,
+        creator_id: 1,
         state_change_date: 1
       } }
     ]
@@ -2202,8 +2292,8 @@ router.get('/mind/:id', async (ctx, next) => {
   , is_wechat = false// ua.indexOf("micromessenger") > 0
   ctx.state = Object.assign(ctx.state, {
     title: [
+      mind.title || mind.summary,
       constant.APP_NAME, 
-      mind.title || mind.summary
     ].join('——'),
     // need_auto_script: false,
     need_dom4_script: false,
@@ -2228,14 +2318,46 @@ router.get('/mind/:id', async (ctx, next) => {
   await ctx.fullRender('mind', resData)
 })
 
+// 感悟编辑页
+router.get('/mind/:id/modify', async (ctx, next) => {
+  const mindId = ctx.params.id
+  ctx.state = Object.assign(ctx.state, { 
+    title: [
+      '编辑感悟',
+      constant.APP_NAME, 
+    ].join('——')
+  })
+
+  // 来源页错误信息
+  let info = ctx.session.info
+
+  // 查找所有烦恼
+  let mind = await Mind.findById(mindId)
+    .select('_id title content keywords column_id')
+    .lean()
+
+  // 返回并渲染首页
+  await ctx.fullRender('classicmodify', {
+    appName: constant.APP_NAME,
+    slogan: constant.APP_SLOGAN,
+    shareHolder: constant.SHARE_HOLDER,
+    features: constant.FEATURES,
+    columns: constant.COLUMNS,
+    mind,
+    backPage: '/mind',
+    info
+  })
+
+  ctx.session.info = null
+})
+
 // 引经据典创建页
 router.get('/classic/create', async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      '推荐作品',
       constant.APP_NAME, 
-      '推荐作品'
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   // 来源页错误信息
@@ -2262,10 +2384,9 @@ router.get('/classic/:id/section/create', async (ctx, next) => {
 
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   // 来源页错误信息
@@ -2290,10 +2411,9 @@ router.get('/section/:id/modify', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   // 来源页错误信息
@@ -2301,7 +2421,7 @@ router.get('/section/:id/modify', async (ctx, next) => {
 
   // 查找章节
   let section = await Section.findById(id)
-    .select('_id title content')
+    .select('_id title content audio')
     .lean()
 
   // 返回并渲染首页
@@ -2323,8 +2443,8 @@ router.get('/translate/:id/modify', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
     ].join('——')
   })
 
@@ -2354,8 +2474,8 @@ router.get('/section/:id/translate/create', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
     ].join('——')
   })
 
@@ -2380,8 +2500,8 @@ router.get('/translate/:id/modify', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
     ].join('——')
   })
 
@@ -2412,8 +2532,8 @@ router.get('/translate/:id', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
     ].join('——')
   })
 
@@ -2437,7 +2557,8 @@ router.get('/translate/:id', async (ctx, next) => {
 router.get('/section/:id', async (ctx, next) => {
   const { id } = ctx.params
   , section = await Section.findById(id)
-    .select('_id classic_id title content')
+    .select('_id classic_id title content audio')
+    .populate('classic', 'title')
     .lean()
   , { classic_id } = section
   , prevSection = await Section.findOne({ 
@@ -2455,10 +2576,9 @@ router.get('/section/:id', async (ctx, next) => {
 
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      section.title,
       constant.APP_NAME, 
-      section.title
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   // 返回并渲染首页
@@ -2480,17 +2600,24 @@ router.get('/classic/:id', async (ctx, next) => {
   // 查找典籍
   let classic_id = ctx.params.id
   , classic = await Classic.findById(classic_id)
-    .select('_id title poster content mind_id')
+    .select(`
+      _id title 
+      poster 
+      content 
+      mind_id 
+      creator_id 
+      column_id 
+      original_author 
+      source`)
     .populate('mind', 'content')
     .lean()
 
   // 标题
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      classic.title,
       constant.APP_NAME, 
-      classic.title
     ].join('——'),
-    is_wechat: false,
   })
 
   // 分页
@@ -2530,7 +2657,7 @@ router.get('/classic/:id', async (ctx, next) => {
   let sections = await Section.find({
     classic_id: ctx.params.id
   })
-    .select('_id title creator_id')
+    .select('_id title creator_id audio')
     .skip(skip)
     .limit(limit)
     .lean()
@@ -2582,10 +2709,9 @@ router.get('/section/:id/translates', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_HOME_PAGE,
       constant.APP_NAME, 
-      constant.APP_HOME_PAGE
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   // 分页
@@ -2653,10 +2779,9 @@ router.get('/classic/:id/modify', async (ctx, next) => {
   const classId = ctx.params.id
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      '编辑作品',
       constant.APP_NAME, 
-      '编辑作品'
-    ].join('——'),
-    is_wechat: false
+    ].join('——')
   })
 
   // 来源页错误信息
@@ -2664,7 +2789,7 @@ router.get('/classic/:id/modify', async (ctx, next) => {
 
   // 查找所有烦恼
   let classic = await Classic.findById(classId)
-    .select('_id title poster content mind_id')
+    .select('_id title poster content mind_id original_author source column_id')
     .populate('mind', 'content')
     .lean()
 
@@ -2687,8 +2812,8 @@ router.get('/classic/:id/modify', async (ctx, next) => {
 router.get('/config', async (ctx, next) => {
   ctx.state = Object.assign(ctx.state, { 
     title: [
+      constant.APP_COMMENT_PAGE,
       constant.APP_NAME, 
-      constant.APP_COMMENT_PAGE
     ].join('——')
   })
 
@@ -2702,7 +2827,7 @@ router.get('/config', async (ctx, next) => {
   ctx.session.info = null
 })
 
-// 
+// 上传图片
 router.post('/uploadImg', async (ctx, next) =>{
   try {
     let accessKey = 'tuLyXahBtm_MifuxWpTuOgYQHbygXS2Yyg5ytRNw'  // 源码删除:七牛云获取 ak,必须配置
@@ -2760,81 +2885,167 @@ router.post('/uploadImg', async (ctx, next) =>{
   }
 })
 
+// 上传音频
+router.post('/uploadAudio', async (ctx, next) =>{
+  try {
+    let accessKey = 'tuLyXahBtm_MifuxWpTuOgYQHbygXS2Yyg5ytRNw'  // 源码删除:七牛云获取 ak,必须配置
+    let secretKey = '955YhRqvnNBrdbSc_HFEhAGrw6z2K7e43r6zWwDy'  // 源码删除:七牛云获取 sk, 必须配置
+    let mac = new qiniu.auth.digest.Mac(accessKey, secretKey)
+    let options = {
+      scope: 'audio',  // 对应七牛云存储空间名称
+      insertOnly: 1,
+      expires: 7200 //token过期时间
+    }
+    let putPolicy = new qiniu.rs.PutPolicy(options)
+    let uploadToken = putPolicy.uploadToken(mac)
+    let form = formidable.IncomingForm()
+    let {respErr, respBody, respInfo, filename} = await new Promise((resolve, reject) => {
+      form.parse(ctx.req, function (err, fields, file) {
+        if (file) {
+          let localFile = file.file.path
+          let config = new qiniu.conf.Config()
+          let formUploader = new qiniu.form_up.FormUploader(config)
+          let putExtra = new qiniu.form_up.PutExtra()
+          let key= file.file.name
+
+          crypto.pseudoRandomBytes(16, function (err, raw) {
+            if (err) {
+              reject(err)
+              return
+            }
+
+            let ext = path.extname(key)
+            key = [raw.toString('hex'), ext].join('')
+            formUploader.putFile(uploadToken, key, localFile, putExtra, function(respErr, respBody, respInfo) {
+              resolve({
+                respErr,
+                respBody,
+                respInfo,
+                filename: key
+              })
+            })
+          })
+        }
+      })
+    })
+    ctx.body = {
+      respErr,
+      audio: `https://audio.tianyeapp.top/${respBody.key}`,//在七牛云上配置域名
+      hash: respBody.hash,
+      status: respInfo.statusCode,
+      filename: respBody.key
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      info: err.message || '上传音频失败'
+    }
+  }
+})
+
 // 发布心念
 router.post('/mind', async (ctx) => {
-  const { 
-    type_id, 
-    content, 
-    title, 
-    column_id, 
-    ref_id, 
-    ref_type,
-    perm_id,
-    behalf
-  } = ctx.request.body
+  const body = ctx.request.body || {}
   , { user } = ctx.state
+  , { title, content } = body
+  , titleTrim = title && title.trim && title.trim()
+  , contentClearly = clearFormat(content)
+  , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
+  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
   let info = ''
+  // 超过限制字数没有使用文章格式
+  if (is_extract) {
+    if (!titleTrim) {
+      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+      ctx.body = {
+        success: false,
+        info
+      }
+      return
+    }
+    // 提取摘要
+    body.summary = Mind.extract(contentClearly)
+  } else {
+    body.summary = contentClearly
+  }
+  body.creator_id = user._id
+  body.keywords = [...new Set(
+    body.keywords 
+    && body.keywords.trim().split(/\s+/) 
+    || [])
+  ]
   try {
-    await Mind.create({ 
-      type_id,
-      title,
-      content,
-      creator_id: user.id,
-      column_id,
-      ref_id,
-      ref_type,
-      perm_id,
-      behalf
-    })
+    let newMind = await Mind.create(body)
+    , docs = body.keywords && body.keywords.map(item => ({ 
+      name: item,
+      mind_id: newMind._id,
+      creator_id: user._id
+    }))
+    await Keyword.insertMany(docs)
     ctx.body = {
       success: true
     }
   } catch (err) {
-    //console.log(err)
-    info = filterMsg(err.message)
+    info = err.message
     ctx.body = {
       success: false,
-      info,
+      info
     }
   }
 })
 
 // 心念更新
 router.put('/mind/:id', async (ctx) => {
-  const { 
-    type_id, 
-    content, 
-    title, 
-    column_id, 
-    perm_id,
-    behalf
-  } = ctx.request.body
-  const { user } = ctx.state
-  const is_extract = content.length > constant.SUMMARY_LIMIT - 3
-  const summary = is_extract
-    ? Mind.extract(content)
-    : content 
-  const now = new Date()
+  const body = ctx.request.body || {}
+  , { title, content } = body
+  , { user } = ctx.state
+  const titleTrim = title && title.trim && title.trim()
+  , contentClearly = clearFormat(content)
+  , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
+  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
+  // 超过限制字数没有使用文章格式
+  if (is_extract) {
+    if (!titleTrim) {
+      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+      ctx.body = {
+        success: false,
+        info
+      }
+      return
+    }
+    // 提取摘要
+    body.summary = Mind.extract(contentClearly)
+  } else {
+    body.summary = contentClearly
+  }
+  body.updated_date = body.state_change_date = new Date()
+  body.keywords = body.keywords 
+  && body.keywords.trim 
+  && [...new Set(body.keywords.trim().split(/\s+/))]
+  || []
   try {
-    await Mind.updateOne({
+    const mind = await Mind.findOneAndUpdate({
       _id: ctx.params.id,
       creator_id: user._id
     }, { 
-      $set: { 
-        type_id, 
-        title, 
-        summary, 
-        content, 
-        column_id, 
-        is_extract,
-        perm_id,
-        behalf,
-        updated_date: now,
-        state_change_date: now,
-      },
-    }, { 
+      $set: body
+    }, {
       runValidators: true
     })
+    let keywords = mind.keywords || []
+    const dels = keywords.filter(item => {
+      return body.keywords.indexOf(item) === -1
+    })
+    const adds = body.keywords.filter(item => {
+      return keywords.indexOf(item) === -1
+    })
+    let docs = adds.map(item => ({ 
+      name: item,
+      mind_id: mind._id,
+      creator_id: user._id
+    }))
+    await Keyword.deleteMany({ mind_id: mind._id, name: { $in: dels } })
+    await Keyword.insertMany(docs)
     ctx.body = {
       success: true,
     }
@@ -2848,22 +3059,50 @@ router.put('/mind/:id', async (ctx) => {
 
 // 引经据典
 router.post('/classic', async (ctx) => {
-  const { title, poster, summary, content } = ctx.request.body
-  const { user } = ctx.state
+  const body = ctx.request.body || {}
+  , { user } = ctx.state
+  , { reason, title, content } = ctx.request.body
+  , reasonTrim = reason 
+    && reason.replace 
+    && reason.replace(/\r|\n|\t/gm, '').trim()
+  , titleTrim = title && title.trim && title.trim()
+  , contentClearly = clearFormat(content)
+  , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
+  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
+  // 推荐理由不能超过147个字符
+  if (reasonTrim.length > sentenceMaxLength) {
+    ctx.body = {
+      success: false,
+      info: '推荐理由不能超过147个字符。'
+    }
+    return
+  }
+  // 超过限制字数没有使用文章格式
+  if (is_extract) {
+    if (!titleTrim) {
+      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+      ctx.body = {
+        success: false,
+        info
+      }
+      return
+    }
+    // 提取摘要
+    body.summary = Classic.extract(contentClearly)
+  } else {
+    body.summary = contentClearly
+  }
+  body.creator_id = user._id
   try {
-    let newClassic = new Classic({ 
-      title,
-      poster,
-      summary: Classic.extract(content),
-      content,
-      creator_id: user.id
-    })
-    let newMind = new Mind({ 
+    let newClassic = new Classic(body)
+    let newMind = new Mind({
       type_id: 'share',
-      content: summary,
-      creator_id: user.id,
+      summary: reasonTrim > sentenceMaxLength ? Mind.extract(reasonTrim) : reasonTrim,
+      content: reason,
+      creator_id: user._id,
       column_id: 'sentence',
       ref_type: 'classic',
+      ref_column: body.column_id,
       perm_id: 'all',
     })
     newClassic.mind_id = newMind._id
@@ -2883,33 +3122,58 @@ router.post('/classic', async (ctx) => {
 
 // 引经据典详情页
 router.put('/classic/:id', async (ctx) => {
-  const { title, poster, summary, content } = ctx.request.body
+  const body = ctx.request.body || {}
+  , { title, content, reason } = body
   , { user } = ctx.state
+  , reasonTrim = reason 
+    && reason.replace 
+    && reason.replace(/\r|\n|\t/gm, '').trim()
+  , titleTrim = title && title.trim && title.trim()
+  , contentClearly = clearFormat(content)
+  , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
+  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
   , now = new Date()
+  // 推荐理由不能超过147个字符
+  if (reasonTrim.length > sentenceMaxLength) {
+    ctx.body = {
+      success: false,
+      info: '推荐理由不能超过147个字符。'
+    }
+    return
+  }
+  // 超过限制字数没有使用文章格式
+  if (is_extract) {
+    if (!titleTrim) {
+      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+      ctx.body = {
+        success: false,
+        info
+      }
+      return
+    }
+    // 提取摘要
+    body.summary = Classic.extract(contentClearly)
+  } else {
+    body.summary = contentClearly
+  }
+  body.updated_date = now
   try {
     let classic = await Classic.findOneAndUpdate({
       _id: ctx.params.id,
       creator_id: user._id
     }, { 
-      $set: {
-        title, 
-        poster, 
-        summary: Classic.extract(content), 
-        content,
-        updated_date: now,
-      },
+      $set: body
     }, { 
       runValidators: true 
     })
 
     let fields = { 
-      content: summary,
+      summary: reasonTrim > sentenceMaxLength ? Mind.extract(reasonTrim) : reasonTrim,
+      content: reason,
       updated_date: now,
+      state_change_date: now,
+      ref_column: body.column_id
     }
-    fields.is_extract = summary.length > constant.SUMMARY_LIMIT - 3
-    fields.summary = fields.is_extract
-      ? Mind.extract(summary)
-      : summary
     await Mind.updateOne({
       _id: classic.mind_id
     }, { 
@@ -2931,7 +3195,7 @@ router.put('/classic/:id', async (ctx) => {
 // 添加章节
 router.post('/classic/:id/section', async (ctx) => {
   const { id } = ctx.params
-  const { title, content } = ctx.request.body
+  const { title, content, audio } = ctx.request.body
   const { user } = ctx.state
   const uid = user._id
   const classic = await Classic.findOne({
@@ -2946,6 +3210,7 @@ router.post('/classic/:id/section', async (ctx) => {
       await Section.create({ 
         title,
         content,
+        audio,
         classic_id: id,
         creator_id: uid
       })
@@ -2960,14 +3225,14 @@ router.post('/classic/:id/section', async (ctx) => {
 // 编辑章节
 router.put('/section/:id', async (ctx) => {
   const { id } = ctx.params
-  const { title, content } = ctx.request.body
+  const { title, content, audio } = ctx.request.body
   const { user } = ctx.state
   try {
     await Section.findOneAndUpdate({
       _id: id,
       creator_id: user._id
     }, { 
-      $set: { title, content },
+      $set: { title, content, audio },
     }, { 
       runValidators: true 
     })
@@ -3452,19 +3717,13 @@ router.put('/friend/:id/remark', async (ctx) => {
 router.delete('/mind/:id', async (ctx, next) => {
   // 心念删除后，回复要被回收器自动清理
   try {
-    let res = await Mind.deleteOne({
+    let mind = await Mind.findOneAndRemove({
       creator_id: ctx.state.user.id,
       _id: ctx.params.id
     })
-    if (res.ok && res.n) {
-      ctx.body = {
-        success: true
-      }
-    } else {
-      ctx.body = {
-        success: false,
-        message: '删除失败'
-      }
+    await Keyword.deleteMany({ mind_id: mind._id, name: { $in: mind.keywords || [] } })
+    ctx.body = {
+      success: true
     }
   } catch (err) {
     ctx.body = {

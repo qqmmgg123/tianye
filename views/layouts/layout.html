@@ -12,14 +12,16 @@
     </div>
   </div>
   <% } %>
+  <% if (particles === 'classics.html') { %>
   <%- include(tempRoot + 'particles/footer.html') %>
+  <% } %>
   <script>
     /* window.onerror = function(message, source, lineno, colno, error) {
       _hmt && _hmt.push(['_trackEvent', 'website', 'error', message]);
     } */
     var globalDataStr='<%= globalData %>';
   </script>
-  <% if (need_global_script) { %>
+  <% if (need_global_script && env === 'production') { %>
   <script src="/static/js/global.js?v=20190502316"></script>
   <% } %>
   <% if (need_auto_script) { %>
