@@ -7,6 +7,7 @@ import { delegate } from '@/js/lib/utils'
 import '@/js/common/global'
 import '@/js/component/audioplay'
 import '@/sass/common/global.scss'
+import '@/sass/particles/quill.viewer.scss'
 import '@/sass/classic.scss'
 
 const d = document
@@ -39,7 +40,7 @@ removeBtn && (removeBtn.onclick = function(e) {
   e = window.event || e
   let el = e.srcElement || e.target
   , id = el.dataset && el.dataset.id || el.getAttribute('data-id')
-  del(`/classic/${id}`)
+  del(`/mind/${id}`)
   .then(function(res) {
     if (res) {
       let { success } = res

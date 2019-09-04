@@ -12,15 +12,12 @@
         border-radius: 3px;
       }
     }
-    input[type=text], textarea, .rich-textarea {
+    input[type=text], textarea {
       width: 100%;
       box-sizing: border-box;
     }
     textarea {
       height: 60px;
-    }
-    .rich-textarea {
-      min-height: 60px;
     }
   }
   .bottom-bar {
@@ -52,15 +49,14 @@
       } 
     }
   }
-  .pell {
-    .action-bar {
-      .action-button {
-        margin-right: 10px;
-      }
-      .action-button-selected {
-        border-color: $cherryRed;
-        color: $cherryRed;
-      }
-    }
+}
+
+.editor-area {
+  position: relative;
+  > .placeholder {
+    position: absolute;
+    top: 11px;
+    left: 11px;
+    color: #999999;
   }
 }

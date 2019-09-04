@@ -1,0 +1,416 @@
+.content-viewer {
+  box-sizing: border-box;
+  line-height: 2;
+  height: 100%;
+  outline: none;
+  overflow-y: auto;
+  padding: 10px;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  text-align: left;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.content-viewer > * {
+  cursor: text;
+}
+.content-viewer p,
+.content-viewer ol,
+.content-viewer ul,
+.content-viewer pre,
+.content-viewer blockquote,
+.content-viewer h1,
+.content-viewer h2,
+.content-viewer h3,
+.content-viewer h4,
+.content-viewer h5,
+.content-viewer h6 {
+  margin: 0;
+  padding: 0;
+  counter-reset: list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.content-viewer ol,
+.content-viewer ul {
+  padding-left: 1.5em;
+}
+.content-viewer ol > li,
+.content-viewer ul > li {
+  list-style-type: none;
+}
+.content-viewer ul > li::before {
+  content: '\2022';
+}
+.content-viewer ul[data-checked=true],
+.content-viewer ul[data-checked=false] {
+  pointer-events: none;
+}
+.content-viewer ul[data-checked=true] > li *,
+.content-viewer ul[data-checked=false] > li * {
+  pointer-events: all;
+}
+.content-viewer ul[data-checked=true] > li::before,
+.content-viewer ul[data-checked=false] > li::before {
+  color: #777;
+  cursor: pointer;
+  pointer-events: all;
+}
+.content-viewer ul[data-checked=true] > li::before {
+  content: '\2611';
+}
+.content-viewer ul[data-checked=false] > li::before {
+  content: '\2610';
+}
+.content-viewer li::before {
+  display: inline-block;
+  white-space: nowrap;
+  width: 1.2em;
+}
+.content-viewer li:not(.ql-direction-rtl)::before {
+  margin-left: -1.5em;
+  margin-right: 0.3em;
+  text-align: right;
+}
+.content-viewer li.ql-direction-rtl::before {
+  margin-left: 0.3em;
+  margin-right: -1.5em;
+}
+.content-viewer ol li:not(.ql-direction-rtl),
+.content-viewer ul li:not(.ql-direction-rtl) {
+  padding-left: 1.5em;
+}
+.content-viewer ol li.ql-direction-rtl,
+.content-viewer ul li.ql-direction-rtl {
+  padding-right: 1.5em;
+}
+.content-viewer ol li {
+  counter-reset: list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+  counter-increment: list-0;
+}
+.content-viewer ol li:before {
+  content: counter(list-0, decimal) '. ';
+}
+.content-viewer ol li.ql-indent-1 {
+  counter-increment: list-1;
+}
+.content-viewer ol li.ql-indent-1:before {
+  content: counter(list-1, lower-alpha) '. ';
+}
+.content-viewer ol li.ql-indent-1 {
+  counter-reset: list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.content-viewer ol li.ql-indent-2 {
+  counter-increment: list-2;
+}
+.content-viewer ol li.ql-indent-2:before {
+  content: counter(list-2, lower-roman) '. ';
+}
+.content-viewer ol li.ql-indent-2 {
+  counter-reset: list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.content-viewer ol li.ql-indent-3 {
+  counter-increment: list-3;
+}
+.content-viewer ol li.ql-indent-3:before {
+  content: counter(list-3, decimal) '. ';
+}
+.content-viewer ol li.ql-indent-3 {
+  counter-reset: list-4 list-5 list-6 list-7 list-8 list-9;
+}
+.content-viewer ol li.ql-indent-4 {
+  counter-increment: list-4;
+}
+.content-viewer ol li.ql-indent-4:before {
+  content: counter(list-4, lower-alpha) '. ';
+}
+.content-viewer ol li.ql-indent-4 {
+  counter-reset: list-5 list-6 list-7 list-8 list-9;
+}
+.content-viewer ol li.ql-indent-5 {
+  counter-increment: list-5;
+}
+.content-viewer ol li.ql-indent-5:before {
+  content: counter(list-5, lower-roman) '. ';
+}
+.content-viewer ol li.ql-indent-5 {
+  counter-reset: list-6 list-7 list-8 list-9;
+}
+.content-viewer ol li.ql-indent-6 {
+  counter-increment: list-6;
+}
+.content-viewer ol li.ql-indent-6:before {
+  content: counter(list-6, decimal) '. ';
+}
+.content-viewer ol li.ql-indent-6 {
+  counter-reset: list-7 list-8 list-9;
+}
+.content-viewer ol li.ql-indent-7 {
+  counter-increment: list-7;
+}
+.content-viewer ol li.ql-indent-7:before {
+  content: counter(list-7, lower-alpha) '. ';
+}
+.content-viewer ol li.ql-indent-7 {
+  counter-reset: list-8 list-9;
+}
+.content-viewer ol li.ql-indent-8 {
+  counter-increment: list-8;
+}
+.content-viewer ol li.ql-indent-8:before {
+  content: counter(list-8, lower-roman) '. ';
+}
+.content-viewer ol li.ql-indent-8 {
+  counter-reset: list-9;
+}
+.content-viewer ol li.ql-indent-9 {
+  counter-increment: list-9;
+}
+.content-viewer ol li.ql-indent-9:before {
+  content: counter(list-9, decimal) '. ';
+}
+.content-viewer .ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 3em;
+}
+.content-viewer li.ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 4.5em;
+}
+.content-viewer .ql-indent-1.ql-direction-rtl.ql-align-right {
+  padding-right: 3em;
+}
+.content-viewer li.ql-indent-1.ql-direction-rtl.ql-align-right {
+  padding-right: 4.5em;
+}
+.content-viewer .ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+.content-viewer li.ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 7.5em;
+}
+.content-viewer .ql-indent-2.ql-direction-rtl.ql-align-right {
+  padding-right: 6em;
+}
+.content-viewer li.ql-indent-2.ql-direction-rtl.ql-align-right {
+  padding-right: 7.5em;
+}
+.content-viewer .ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 9em;
+}
+.content-viewer li.ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 10.5em;
+}
+.content-viewer .ql-indent-3.ql-direction-rtl.ql-align-right {
+  padding-right: 9em;
+}
+.content-viewer li.ql-indent-3.ql-direction-rtl.ql-align-right {
+  padding-right: 10.5em;
+}
+.content-viewer .ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 12em;
+}
+.content-viewer li.ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 13.5em;
+}
+.content-viewer .ql-indent-4.ql-direction-rtl.ql-align-right {
+  padding-right: 12em;
+}
+.content-viewer li.ql-indent-4.ql-direction-rtl.ql-align-right {
+  padding-right: 13.5em;
+}
+.content-viewer .ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 15em;
+}
+.content-viewer li.ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 16.5em;
+}
+.content-viewer .ql-indent-5.ql-direction-rtl.ql-align-right {
+  padding-right: 15em;
+}
+.content-viewer li.ql-indent-5.ql-direction-rtl.ql-align-right {
+  padding-right: 16.5em;
+}
+.content-viewer .ql-indent-6:not(.ql-direction-rtl) {
+  padding-left: 18em;
+}
+.content-viewer li.ql-indent-6:not(.ql-direction-rtl) {
+  padding-left: 19.5em;
+}
+.content-viewer .ql-indent-6.ql-direction-rtl.ql-align-right {
+  padding-right: 18em;
+}
+.content-viewer li.ql-indent-6.ql-direction-rtl.ql-align-right {
+  padding-right: 19.5em;
+}
+.content-viewer .ql-indent-7:not(.ql-direction-rtl) {
+  padding-left: 21em;
+}
+.content-viewer li.ql-indent-7:not(.ql-direction-rtl) {
+  padding-left: 22.5em;
+}
+.content-viewer .ql-indent-7.ql-direction-rtl.ql-align-right {
+  padding-right: 21em;
+}
+.content-viewer li.ql-indent-7.ql-direction-rtl.ql-align-right {
+  padding-right: 22.5em;
+}
+.content-viewer .ql-indent-8:not(.ql-direction-rtl) {
+  padding-left: 24em;
+}
+.content-viewer li.ql-indent-8:not(.ql-direction-rtl) {
+  padding-left: 25.5em;
+}
+.content-viewer .ql-indent-8.ql-direction-rtl.ql-align-right {
+  padding-right: 24em;
+}
+.content-viewer li.ql-indent-8.ql-direction-rtl.ql-align-right {
+  padding-right: 25.5em;
+}
+.content-viewer .ql-indent-9:not(.ql-direction-rtl) {
+  padding-left: 27em;
+}
+.content-viewer li.ql-indent-9:not(.ql-direction-rtl) {
+  padding-left: 28.5em;
+}
+.content-viewer .ql-indent-9.ql-direction-rtl.ql-align-right {
+  padding-right: 27em;
+}
+.content-viewer li.ql-indent-9.ql-direction-rtl.ql-align-right {
+  padding-right: 28.5em;
+}
+.content-viewer .ql-video {
+  display: block;
+  max-width: 100%;
+}
+.content-viewer .ql-video.ql-align-center {
+  margin: 0 auto;
+}
+.content-viewer .ql-video.ql-align-right {
+  margin: 0 0 0 auto;
+}
+.content-viewer .ql-bg-black {
+  background-color: #000;
+}
+.content-viewer .ql-bg-red {
+  background-color: #e60000;
+}
+.content-viewer .ql-bg-orange {
+  background-color: #f90;
+}
+.content-viewer .ql-bg-yellow {
+  background-color: #ff0;
+}
+.content-viewer .ql-bg-green {
+  background-color: #008a00;
+}
+.content-viewer .ql-bg-blue {
+  background-color: #06c;
+}
+.content-viewer .ql-bg-purple {
+  background-color: #93f;
+}
+.content-viewer .ql-color-white {
+  color: #fff;
+}
+.content-viewer .ql-color-red {
+  color: #e60000;
+}
+.content-viewer .ql-color-orange {
+  color: #f90;
+}
+.content-viewer .ql-color-yellow {
+  color: #ff0;
+}
+.content-viewer .ql-color-green {
+  color: #008a00;
+}
+.content-viewer .ql-color-blue {
+  color: #06c;
+}
+.content-viewer .ql-color-purple {
+  color: #93f;
+}
+.content-viewer .ql-font-serif {
+  font-family: Georgia, Times New Roman, serif;
+}
+.content-viewer .ql-font-monospace {
+  font-family: Monaco, Courier New, monospace;
+}
+.content-viewer .ql-size-small {
+  font-size: 0.75em;
+}
+.content-viewer .ql-size-large {
+  font-size: 1.5em;
+}
+.content-viewer .ql-size-huge {
+  font-size: 2.5em;
+}
+.content-viewer .ql-direction-rtl {
+  direction: rtl;
+  text-align: inherit;
+}
+.content-viewer .ql-align-center {
+  text-align: center;
+}
+.content-viewer .ql-align-justify {
+  text-align: justify;
+}
+.content-viewer .ql-align-right {
+  text-align: right;
+}
+.content-viewer.ql-blank::before {
+  color: rgba(0,0,0,0.6);
+  content: attr(data-placeholder);
+  font-style: italic;
+  left: 15px;
+  pointer-events: none;
+  position: absolute;
+  right: 15px;
+}
+.content-viewer h1 {
+  font-size: 2em;
+}
+.content-viewer h2 {
+  font-size: 1.5em;
+}
+.content-viewer h3 {
+  font-size: 1.17em;
+}
+.content-viewer h4 {
+  font-size: 1em;
+}
+.content-viewer h5 {
+  font-size: 0.83em;
+}
+.content-viewer h6 {
+  font-size: 0.67em;
+}
+.content-viewer a {
+  text-decoration: underline;
+}
+.content-viewer blockquote {
+  border-left: 4px solid #ccc;
+  margin-bottom: 5px;
+  margin-top: 5px;
+  padding-left: 16px;
+}
+.content-viewer code,
+.content-viewer pre {
+  background-color: #f0f0f0;
+  border-radius: 3px;
+}
+.content-viewer pre {
+  white-space: pre-wrap;
+  margin-bottom: 5px;
+  margin-top: 5px;
+  padding: 5px 10px;
+}
+.content-viewer code {
+  font-size: 85%;
+  padding: 2px 4px;
+}
+.content-viewer pre.ql-syntax {
+  background-color: #23241f;
+  color: #f8f8f2;
+  overflow: visible;
+}
+.content-viewer img {
+  max-width: 100%;
+}

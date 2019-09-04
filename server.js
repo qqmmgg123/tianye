@@ -2384,7 +2384,7 @@ router.get('/classic/:id/section/create', async (ctx, next) => {
 
   ctx.state = Object.assign(ctx.state, { 
     title: [
-      constant.APP_HOME_PAGE,
+      '添加章节',
       constant.APP_NAME, 
     ].join('——')
   })
@@ -2411,7 +2411,7 @@ router.get('/section/:id/modify', async (ctx, next) => {
   const { id } = ctx.params
   ctx.state = Object.assign(ctx.state, { 
     title: [
-      constant.APP_HOME_PAGE,
+      '编辑章节',
       constant.APP_NAME, 
     ].join('——')
   })
@@ -2609,7 +2609,7 @@ router.get('/classic/:id', async (ctx, next) => {
       column_id 
       original_author 
       source`)
-    .populate('mind', 'content')
+    .populate('mind', 'content keywords')
     .lean()
 
   // 标题
@@ -2790,7 +2790,7 @@ router.get('/classic/:id/modify', async (ctx, next) => {
   // 查找所有烦恼
   let classic = await Classic.findById(classId)
     .select('_id title poster content mind_id original_author source column_id')
-    .populate('mind', 'content')
+    .populate('mind', 'content keywords')
     .lean()
 
   // 返回并渲染首页
@@ -2947,16 +2947,18 @@ router.post('/uploadAudio', async (ctx, next) =>{
 router.post('/mind', async (ctx) => {
   const body = ctx.request.body || {}
   , { user } = ctx.state
-  , { title, content } = body
-  , titleTrim = title && title.trim && title.trim()
+  , { column_id, content } = body
   , contentClearly = clearFormat(content)
+  , contentLength = (
+    contentClearly 
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim()).length
   , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
-  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
+  , is_extract = contentLength > sentenceMaxLength
   let info = ''
   // 超过限制字数没有使用文章格式
   if (is_extract) {
-    if (!titleTrim) {
-      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+    if (column_id === constant.COLUMNS.SENTENCE.id) {
+      info = `句子内容不能超过${sentenceMaxLength}个字。`
       ctx.body = {
         success: false,
         info
@@ -2997,23 +2999,24 @@ router.post('/mind', async (ctx) => {
 // 心念更新
 router.put('/mind/:id', async (ctx) => {
   const body = ctx.request.body || {}
-  , { title, content } = body
+  , { column_id, content } = body
   , { user } = ctx.state
-  const titleTrim = title && title.trim && title.trim()
   , contentClearly = clearFormat(content)
+  , contentLength = (
+    contentClearly 
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim()).length
   , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
-  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
+  , is_extract = contentLength > sentenceMaxLength
   // 超过限制字数没有使用文章格式
   if (is_extract) {
-    if (!titleTrim) {
-      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+    if (column_id === constant.COLUMNS.SENTENCE.id) {
+      info = `句子内容不能超过${sentenceMaxLength}个字。`
       ctx.body = {
         success: false,
         info
       }
       return
     }
-    // 提取摘要
     body.summary = Mind.extract(contentClearly)
   } else {
     body.summary = contentClearly
@@ -3061,26 +3064,28 @@ router.put('/mind/:id', async (ctx) => {
 router.post('/classic', async (ctx) => {
   const body = ctx.request.body || {}
   , { user } = ctx.state
-  , { reason, title, content } = ctx.request.body
+  , { reason, content, column_id, keywords } = ctx.request.body
   , reasonTrim = reason 
     && reason.replace 
     && reason.replace(/\r|\n|\t/gm, '').trim()
-  , titleTrim = title && title.trim && title.trim()
   , contentClearly = clearFormat(content)
+  , contentLength = (
+    contentClearly 
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim()).length
   , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
-  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
+  , is_extract = contentLength > sentenceMaxLength
   // 推荐理由不能超过147个字符
   if (reasonTrim.length > sentenceMaxLength) {
     ctx.body = {
       success: false,
-      info: '推荐理由不能超过147个字符。'
+      info: `推荐理由不能超过${sentenceMaxLength}个字。`
     }
     return
   }
-  // 超过限制字数没有使用文章格式
+  // 句子不能超过147个字符
   if (is_extract) {
-    if (!titleTrim) {
-      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+    if (column_id === constant.COLUMNS.SENTENCE.id) {
+      info = `句子内容不能超过${sentenceMaxLength}个字。`
       ctx.body = {
         success: false,
         info
@@ -3092,7 +3097,12 @@ router.post('/classic', async (ctx) => {
   } else {
     body.summary = contentClearly
   }
+  console.log(body.summary)
   body.creator_id = user._id
+  let keywordsArr = keywords 
+  && keywords.trim 
+  && [...new Set(keywords.trim().split(/\s+/))]
+  || []
   try {
     let newClassic = new Classic(body)
     let newMind = new Mind({
@@ -3100,15 +3110,23 @@ router.post('/classic', async (ctx) => {
       summary: reasonTrim > sentenceMaxLength ? Mind.extract(reasonTrim) : reasonTrim,
       content: reason,
       creator_id: user._id,
+      keywords: keywordsArr,
       column_id: 'sentence',
       ref_type: 'classic',
       ref_column: body.column_id,
       perm_id: 'all',
     })
+    let docs = keywordsArr && keywordsArr.map(item => ({ 
+      name: item,
+      mind_id: newMind._id,
+      creator_id: user._id
+    }))
     newClassic.mind_id = newMind._id
     newMind.ref_id = newClassic._id
     await newClassic.save()
     await newMind.save()
+    // 存储关键词
+    await Keyword.insertMany(docs)
     ctx.body = {
       success: true,
     }
@@ -3123,28 +3141,30 @@ router.post('/classic', async (ctx) => {
 // 引经据典详情页
 router.put('/classic/:id', async (ctx) => {
   const body = ctx.request.body || {}
-  , { title, content, reason } = body
+  , { keywords, content, reason, column_id } = body
   , { user } = ctx.state
   , reasonTrim = reason 
     && reason.replace 
     && reason.replace(/\r|\n|\t/gm, '').trim()
-  , titleTrim = title && title.trim && title.trim()
   , contentClearly = clearFormat(content)
+  , contentLength = (
+    contentClearly 
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim()).length
   , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
-  , is_extract = contentClearly && contentClearly.length > sentenceMaxLength
+  , is_extract = contentLength > sentenceMaxLength
   , now = new Date()
   // 推荐理由不能超过147个字符
   if (reasonTrim.length > sentenceMaxLength) {
     ctx.body = {
       success: false,
-      info: '推荐理由不能超过147个字符。'
+      info: `推荐理由不能超过${sentenceMaxLength}个字。`
     }
     return
   }
   // 超过限制字数没有使用文章格式
   if (is_extract) {
-    if (!titleTrim) {
-      info = `内容超过${sentenceMaxLength}个字请填写标题和使用文章格式`
+    if (column_id === constant.COLUMNS.SENTENCE.id) {
+      info = `句子内容不能超过${sentenceMaxLength}个字。`
       ctx.body = {
         success: false,
         info
@@ -3157,6 +3177,10 @@ router.put('/classic/:id', async (ctx) => {
     body.summary = contentClearly
   }
   body.updated_date = now
+  let keywordsArr = keywords 
+  && keywords.trim 
+  && [...new Set(keywords.trim().split(/\s+/))]
+  || []
   try {
     let classic = await Classic.findOneAndUpdate({
       _id: ctx.params.id,
@@ -3172,15 +3196,30 @@ router.put('/classic/:id', async (ctx) => {
       content: reason,
       updated_date: now,
       state_change_date: now,
-      ref_column: body.column_id
+      ref_column: body.column_id,
+      keywords: keywordsArr
     }
-    await Mind.updateOne({
+    let mind = await Mind.findOneAndUpdate({
       _id: classic.mind_id
     }, { 
       $set: fields
     }, { 
       runValidators: true 
     })
+    let oldKeywords = mind.keywords || []
+    const dels = oldKeywords.filter(item => {
+      return keywordsArr.indexOf(item) === -1
+    })
+    const adds = keywordsArr.filter(item => {
+      return oldKeywords.indexOf(item) === -1
+    })
+    let docs = adds.map(item => ({ 
+      name: item,
+      mind_id: mind._id,
+      creator_id: user._id
+    }))
+    await Keyword.deleteMany({ mind_id: mind._id, name: { $in: dels } })
+    await Keyword.insertMany(docs)
     ctx.body = {
       success: true,
     }
@@ -3722,6 +3761,11 @@ router.delete('/mind/:id', async (ctx, next) => {
       _id: ctx.params.id
     })
     await Keyword.deleteMany({ mind_id: mind._id, name: { $in: mind.keywords || [] } })
+    if (mind.ref_type === 'classic') {
+      await Classic.remove({
+        _id: mind.ref_id,
+      })
+    }
     ctx.body = {
       success: true
     }

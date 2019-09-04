@@ -2,14 +2,15 @@ if (module.hot) {
   module.hot.accept();
 }
 
-import { dispatchEvent } from '@/js/lib/utils'
 import { clearFormat } from '@/js/lib/clearformat'
+import { dispatchEvent, stringToByteSize } from '@/js/lib/utils'
 import { put, post } from '@/js/lib/request'
 import '@/js/common/global'
 import '@/js/lib/dom'
 import '@/sass/common/global.scss'
 import '@/sass/classicmodify.scss'
-import classicEditor from './component/classiceditor'
+import '@/sass/particles/quill.editor.scss'
+import autosize from 'autosize'
 
 // 私有属性 privacy
 const classicForm = d.getElementById('classicForm')
@@ -17,9 +18,6 @@ const classicForm = d.getElementById('classicForm')
 , inputs = [...classicForm.querySelectorAll('[name]')]
 , names = inputs.map(input => input.name)
 , submitBtn = classicForm.querySelector('button[type=submit]')
-, columnInput = inputs.find(
-  input => input.name === 'column_id'
-)
 
 // 图片上传相关
 const posterInput = inputs.find(
@@ -33,21 +31,25 @@ const posterInput = inputs.find(
 // 添加章节相关
 const addSectionBtn = d.querySelector('button[ref=add-section]')
 
-// 初始化编辑器类型
+// 初始化内容
 let object = null
 , inputChecks = []
 , initalChecks = []
 , _id = ''
+
+// 推荐内容
 if (typeof classic !== 'undefined') {
   object = classic || {}
   _id = object._id || ''
-  initalChecks = inputChecks = ['original_author', 'source', 'content']
+  initalChecks = inputChecks = ['reason', 'original_author', 'source', 'content']
   // 初始化校验表单
   if (_id) {
     object.reason = object.mind && (object.mind.content || (object.mind[0] && object.mind[0].content)) || ''
     checkInput()
   }
 }
+
+// 原创内容
 if (typeof mind !== 'undefined') {
   object = mind || {}
   _id = object._id || ''
@@ -62,9 +64,36 @@ if (typeof mind !== 'undefined') {
   // 只有mind类型要填关键字
   object.keywords && (object.keywords = object.keywords.join(' '))
 }
+
+// 原创与推荐公共部分
 if (object) {
   object.column_id = object.column_id || 'sentence'
 }
+
+// 初始化推荐
+let reasonInput = document.querySelector('textarea[name=reason]')
+reasonInput && autosize(reasonInput)
+
+// 初始化文章编辑器
+let outPutEl = document.querySelector('textarea[name=content]')
+, editor_tips = outPutEl.parentNode.querySelector('.tips')
+, toolbar = document.getElementById('mind-toolbar')
+, editor = new Quill('#mind-editor', {
+  modules: { toolbar },
+  theme: 'snow'
+})
+, editorCon = editor.container.parentNode
+, placeholder = editorCon.querySelector('span.placeholder')
+, blankHtml = '<p><br></p>'
+editor.on('text-change', function(delta, oldDelta, source) {
+  let html = editor.root.innerHTML 
+  html = html === blankHtml ? '' : html
+  togglePlaceholder(html)
+  let editor_value = html
+  outPutEl.value = editor_value
+  dispatchEvent(outPutEl, 'input')
+})
+autosize(outPutEl)
 
 // 输入事件触发
 classicForm.oninput = (e) => {
@@ -73,11 +102,19 @@ classicForm.oninput = (e) => {
   , name = el.name
   if (names.indexOf(name) !== -1) {
     let value = el.value
+    , valid = true
     object[name] = value
     if (name === 'column_id') {
       changeColumnType(value)
+    } else if (name === 'content') {
+      if (object.column_id === 'sentence') {
+        if (!checkSentenceLength(el, value)) valid = false
+      }
+    } else if (name === 'reason') {
+      if (!checkSentenceLength(el, value)) valid = false
     }
-    checkInput()
+    if (!checkInput()) valid = false
+    submitBtn.disabled = !valid
   }
 }
 
@@ -176,66 +213,7 @@ fileInput && (fileInput.onchange = (e) => {
 })
 
 // 创建富文本编辑器
-let titleField = null
-, bindEl = document.getElementById('editor')
-, outputEl = document.getElementById('html-output')
-, editor = classicEditor.create({ 
-  bindEl, 
-  outputEl,
-  onPreInput(html) {
-    return new Promise((resolve, reject) => {
-      let str = clearFormat(html)
-      if (str.length > 147) {
-        resolve({ needAsk: false })
-        if (columnInput.value !== 'article') {
-          columnInput.value = 'article'
-          editor.showActionBar()
-          if (!titleField) {
-            titleField = d.createElement('div')
-            let titleInput = d.createElement('input')
-            , curFleid = outputEl.parentNode
-            , tips = curFleid.querySelector('.tips')
-            titleInput.name = 'title'
-            titleInput.type = 'text'
-            titleInput.placeholder = '标题'
-            titleField.className = 'form-group'
-            titleField.appendChild(titleInput)
-            classicForm.insertBefore(titleField, curFleid)
-            tips.style.display = ''
-            tips.innerHTML = '您输入的内容超过147个字，请填写标题并使用文章格式。'
-            names.push('title')
-            inputChecks.push('title')
-          }
-        }
-      } else {
-        if (columnInput.value !== 'sentence') {
-          let popup = confirm("您输入的内容少于147个字，将会清除格式!");
-          if (popup == true) {
-            resolve({ needAsk: true, html: str  })
-            columnInput.value = 'sentence'
-            editor.hideActionBar()
-            if (titleField) {
-              classicForm.removeChild(titleField)
-              let index = names.indexOf('title')
-              , curFleid = outputEl.parentNode
-              , tips = curFleid.querySelector('.tips')
-              tips.innerHTML = ''
-              tips.style.display = 'none'
-              index !== -1 && names.splice(index, 1)
-              index = inputChecks.indexOf('title')
-              index !== -1 && inputChecks.splice(index, 1)
-              titleField = null
-            }
-          } else {
-            resolve({ needAsk: true, html: outputEl.value })
-          }
-          return
-        }
-        resolve({ needAsk: false })
-      }
-    })
-  }
-})
+
 
 // 初始化书写类型
 let titleInput = inputs.find(input => input.name === 'title')
@@ -273,34 +251,26 @@ function beginUpload(file) {
 // 当前模块函数 privacy
 function checkInput() {
   let isEveryNoEmpty = inputChecks.every(name => object[name])
-  if (isEveryNoEmpty) submitBtn.disabled = false
-  else submitBtn.disabled = true
+  if (isEveryNoEmpty) return true
+  else return false
+}
+
+// 句子的字数验证
+function checkSentenceLength(el, text) {
+  let formatStr = text.replace(/\r|\n|\t/gm, '').trim()
+  , length = formatStr.length
+  , err_tips = el.parentNode.querySelector('.tips')
+  if (length > 147) {
+    err_tips.innerHTML = `句子字数不能超过147个字，已经超出${length - 147}个字`
+    err_tips.style.display = ''
+    return false
+  } else {
+    err_tips.style.display = 'none'
+    return true
+  }
 }
 
 // public
-function stringToByteSize(str) {
-  let result, unit
-  , map = {
-    B: 1,
-    KB: 1024,
-    MB: 1024 * 1024,
-    GB: 1024 * 1024 * 1024,
-    TB: 1024 * 1024 * 1024 * 1024
-  }
-
-  if (!str) {
-    return null
-  }
-  result = /(\d+(?:\.\d+)?)?(B|KB|MB|GB|TB)/i.exec(str)
-
-  if (!result || result.length < 1) {
-    return null
-  }
-
-  unit = result[2] ? result[2].toUpperCase() : 'B'
-  return Math.ceil(parseFloat(result[1]) * map[unit])
-}
-
 function genBody(data, names) {
   let body = {}
   names.forEach(name => {
@@ -316,19 +286,40 @@ function changeColumnType(type) {
       titleInput && (titleInput.parentNode.style.display = 'none')
       posterInput && (posterInput.parentNode.style.display = 'none')
       addSectionBtn && (addSectionBtn.style.display = 'none')
+      outPutEl && (outPutEl.style.display = '')
+      let text = clearFormat(outPutEl.value)
+      outPutEl.value = text
+      dispatchEvent(outPutEl, 'input')
+      editorCon.style.display = 'none'
+      toolbar.style.display = 'none'
       inputChecks = initalChecks
       break
     case 'article':
       titleInput && (titleInput.parentNode.style.display = '')
       posterInput && (posterInput.parentNode.style.display = 'none')
       addSectionBtn && (addSectionBtn.style.display = 'none')
+      outPutEl && (outPutEl.style.display = 'none')
+      editor.pasteHTML(outPutEl.value);
+      editorCon.style.display = ''
+      toolbar.style.display = ''
       inputChecks = initalChecks.concat([ 'title' ])
+      editor_tips.style.display = 'none'
       break
     case 'works':
       titleInput && (titleInput.parentNode.style.display = '')
       posterInput && (posterInput.parentNode.style.display = '')
       addSectionBtn && (addSectionBtn.style.display = '')
+      outPutEl && (outPutEl.style.display = 'none')
+      editor.pasteHTML(outPutEl.value);
+      editorCon.style.display = ''
+      toolbar.style.display = ''
       inputChecks = initalChecks.concat([ 'title', 'poster' ])
+      editor_tips.style.display = 'none'
       break
   }
+}
+
+// 公共函数
+function togglePlaceholder(html) {
+  placeholder.style.display = html ? 'none' : ''
 }
