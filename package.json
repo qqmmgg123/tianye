@@ -22,7 +22,7 @@
     "koa-session": "^5.9.0",
     "koa-static": "^5.0.0",
     "koa-views": "^5.2.1",
-    "mongoose": "^5.2.13",
+    "mongoose": "^5.7.5",
     "nodemailer": "^4.7.0",
     "nodemailer-smtp-transport": "^2.7.4",
     "nodemailer-wellknown": "^0.2.3",
