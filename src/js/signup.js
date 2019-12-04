@@ -20,7 +20,7 @@ const _tips = function(type) {
 , signupForm = document.querySelector('form')
 , inputs = [...signupForm.querySelectorAll('[name]')]
 , names = inputs.map(input => input.name)
-, inputChecks = ['nickname', 'password', 'phone_number', 'code']
+, inputChecks = ['partyname', 'password', 'phone_number', 'code']
 , submitBtn = signupForm.querySelector('button[type=submit]')
 , codeBtn = signupForm.querySelector('[rel-ctl="sendCode"]')
 // 区号选择下拉

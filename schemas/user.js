@@ -1,5 +1,5 @@
 const Schema = require('mongoose').Schema
-const constant = require('../settings/const')
+, constant = require('../settings/const')
 
 let userSchema = new Schema({
   username: { 
@@ -11,13 +11,13 @@ let userSchema = new Schema({
   phone: { 
     type: String, 
     unique: true, 
-    required: [true, constant.PHONE_REQUIRED],
+    // required: [true, constant.PHONE_REQUIRED],
     trim: true
   },
   nickname: { 
     type: String, 
     trim: true, 
-    required: [true, constant.NICKNAME_REQUIRED],
+    // required: [true, constant.NICKNAME_REQUIRED],
     maxlength: [24, constant.NICKNAME_MAXLEN_ERROR]
   },
   hash: { type: String, select: false },

@@ -1,5 +1,6 @@
 const Schema = require('mongoose').Schema
-const constant = require('../settings/const')
+, constant = require('../settings/const')
+, maxlength = constant.SUMMARY_LIMIT - 3
 
 let mindSchema = new Schema({
   // 以组织或以个人名义
@@ -30,14 +31,15 @@ let mindSchema = new Schema({
   },
   title: { 
     type: String, 
+    maxlength,
     trim: true
   },
   summary: { 
     type: String, 
-    maxlength: [ 
-      150, 
+    /* maxlength: [ 
+      maxlength, 
       constant.OVER_MAX_SUMMARYLENGTH 
-    ],
+    ], */
     trim: true
   },
   is_extract: {
@@ -91,6 +93,10 @@ let mindSchema = new Schema({
       true, 
       constant.MISS_PARAMS
     ],
+  },
+  // 公号
+  party_id: {
+    type: Schema.Types.ObjectId
   },
   // 最新的回复
   last_reply_id: { 

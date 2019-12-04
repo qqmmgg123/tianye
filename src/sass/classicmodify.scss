@@ -17,9 +17,31 @@
     display: block;
     float: left;
   }
-  div {
+  .progress {
     float: right;
     padding: 10px;
     line-height: 12px;
+  }
+  .preview {
+    width: 210px;
+    height: 270px;
+    margin: 0 auto;
+    background-color: #f2f3f4;
+    .iconfont {
+      width: 28px;
+      height: 28px;
+      text-align: center;
+      line-height: 28px;
+      font-size: 16px;
+      display: block;
+      margin-left: 186px;
+      border-radius: 50%;
+      background-color: #000000;
+      opacity: 0.6;
+      color: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
   }
 }

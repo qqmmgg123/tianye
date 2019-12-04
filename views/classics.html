@@ -1,33 +1,26 @@
-<% if (user && (user.administrator || user.super)) { %>
-<div class="crumbs">
-  <div class="button-area">
-    <a href="/mind/create" class="button">分享感悟</a>
-    <a href="/classic/create" class="button">推荐内容</a>
-    <!--<a href="/login" class="button">分享感悟</a>-->
-    <!--<a href="/login" class="button">推荐内容</a>-->
-  </div>
-</div>
-<hr>
-<% } %>
 <div class="tags">
   <div class="categorys">
-    <a class="<%= !currTag ? 'active' : '' %>" href="/<%= currKeyword ? '?keywords=' + currKeyword : '' %>">全部</a>
-    <a class="<%= currTag === 'works' ? 'active' : '' %>" href="?tag=works<%= currKeyword ? '&keywords=' + currKeyword : '' %>">作品</a>
-    <a class="<%= currTag === 'article' ? 'active' : '' %>" href="?tag=article<%= currKeyword ? '&keywords=' + currKeyword : '' %>">文章</a>
-    <a class="<%= currTag === 'sentence' ? 'active' : '' %>" href="?tag=sentence<%= currKeyword ? '&keywords=' + currKeyword : '' %>">句子</a>
+    <a class="<%= !currTag ? 'active' : '' %>" href="/">全部</a>
+    <a class="<%= currTag === 'feeling' ? 'active' : '' %>" href="?tag=feeling">感悟</a>
+    <a class="<%= currTag === 'trouble' ? 'active' : '' %>" href="?tag=trouble">烦恼</a>
   </div>
+  <!--<div>
+    <a class="<%= currTag === 'works' ? 'active' : '' %>" href="?tag=works">作品</a>
+    <a class="<%= currTag === 'article' ? 'active' : '' %>" href="?tag=article">文章</a>
+    <a class="<%= currTag === 'sentence' ? 'active' : '' %>" href="?tag=sentence">句子</a>
+  </div>-->
   <% if (keywordList && keywordList.length) { %>
-  <div class="keyword-list">
+  <div class="keyword-list" style="display: none;">
     <% keywordList.forEach(keyword => { %>
     <% let params= [ currTag ? 'tag=' + currTag : '', currKeyword === keyword._id ? '' : 'keywords=' + keyword._id ].filter(item => !!item); %>
     <a class="<%= currKeyword === keyword._id ? 'active' : '' %>" href="<%= params.length > 0 ? '?' + params.join('&') : '/' %>"><%= keyword._id %><%- currKeyword === keyword._id ? '<i class="iconfont icon-guanbi"></i>' : '' %></a>
     <% }) %>
   </div>
-  <% } %>
-  <div class="show-more" style="display: none;">
-    <span>点击展开更多</span>
+  <div class="show-more">
+    <span>内容类别</span>
     <i class="iconfont icon-fanhui"></i>
   </div>
+  <% } %>
 </div>
 <hr>
 <ol id="classics" class="list">
@@ -36,6 +29,41 @@
   <li class="item fade">
     <%- include(tempRoot + 'particles/classicref.html', { mind }) %>
     <div class="bottom-bar">
+      <% if (mind.type_id === 'help') { %>
+      <a class="party-name" href="/?tag=trouble">
+        <i class="iconfont icon-Sad"></i>
+        烦恼
+      </a>
+      <% } else { %>
+      <a class="party-name" href="/party/<%= mind.party && mind.party._id %>"><%= mind.party && mind.party.name ? mind.party.name + '（公开号）' : '' %></a>
+      <% } %>
+      <% if (mind.keywords && mind.keywords.length) { %>
+        <% for (let i = 0, l = mind.keywords.length; i < Math.min(l, 5); i++) { %>
+        <a class="party-name" href="/?keywords=<%= mind.keywords[i] %>">
+          #<%= mind.keywords[i] %>
+        </a>
+        <% } %>
+      <% } %>
+      <div class="right-ctrl">
+        <!--<a href="javascripy:;">
+          <i class="iconfont icon-tianjiaguanzhu"></i>
+        </a>-->
+        <% if (mind.type_id === 'help') { %>
+        <a href="/mind/<%= mind._id %>#reply" class="comfort">
+          <i class="iconfont icon-karma"></i>
+          慰藉
+        </a>
+        <% } else { %>
+        <% if (mind.quote) { %>
+        <a href="/classic/<%= mind.quote._id %>#reply" class="comfort">
+        <% } else { %>
+        <a href="/mind/<%= mind._id %>#reply" class="comfort">
+        <% } %>
+          <i class="iconfont icon-icon_huifu-xian"></i>
+          评论
+        </a>
+        <% } %>
+      </div>
     </div>
     <hr />
   </li>
@@ -47,3 +75,87 @@
   <% } %>
   <%- include(tempRoot + 'particles/pagination.html') %>
 </ol>
+<% if (!currTag) { %>
+<div id="introspection" class="popup">
+  <div class="popup-inner">
+    <div class="popup-header">
+      <a href="javascript:;">
+        <i class="iconfont icon-guanbi"></i>
+      </a>
+    </div>
+    <div class="question">
+      <div class="container">
+        此时此刻的您，心情还好吗？
+      </div>
+      <div class="popup-footer">
+        <button class="good" type="button">挺好</button>
+        <button class="bad" type="button">不太好</button>
+        <button class="pass" type="button">跳过</button>
+      </div>
+    </div>
+    <div class="knowledge" style="display: none;">
+      <form>
+        <div class="container">
+          能分享您的快乐，或教导我们您快乐的心得，带着我们一起前行吗？感谢！
+          <input type="hidden" name="column_id" value="sentence" />
+          <input type="hidden" name="type_id" value="help" />
+          <div class="form-group" style="display: none;">
+            <input name="title" type="text" placeholder="标题">
+          </div>
+          <div class="form-group">
+            <textarea name="content" rows="6" placeholder="分享感悟，忠告，或抚慰心灵的鸡汤。"></textarea>
+            <div class="tips"></div>
+          </div>
+          <%- include(tempRoot + 'particles/phonefield.html', { placeholder: '手机号（以此为您创建或找回心灵笔记）' }) %>
+        </div>
+        <div class="popup-footer">
+          <button class="share" type="button">分享</button>
+          <button class="pass" type="button">跳过</button>
+        </div>
+      </form>
+    </div>
+    <div class="worry" style="display: none;">
+      <form>
+        <div class="container">
+          怎么啦，能简单描述下您不好的状态吗？希望我们能并肩一起对治烦恼！
+          <input type="hidden" name="column_id" value="sentence" />
+          <input type="hidden" name="type_id" value="help" />
+          <div class="form-group" style="display: none;">
+            <input name="title" type="text" placeholder="标题">
+          </div>
+          <div class="form-group">
+            <textarea name="content" rows="6" placeholder="说出您内心的纠结、烦恼、与痛苦..."></textarea>
+            <div class="tips"></div>
+          </div>
+          <%- include(tempRoot + 'particles/phonefield.html', { placeholder: '手机号（以此为您创建或找回心灵笔记）' }) %>
+        </div>
+        <div class="popup-footer">
+          <button class="send" type="button">送出</button>
+          <button class="pass" type="button">跳过</button>
+        </div>
+      </form>
+    </div>
+    <div class="singup" style="display: none;">
+      <form>
+        <div class="container">
+          内寻，不外求，快乐很多时候只是简单的自我疗愈。<br>您已经在田野耘心建立了第一份您的心灵笔记。<br>请给您的笔记设置一个名字、一个密码，以及可以帮您找回笔记的手机号。
+          <div class="form-group">
+            <label>
+              <input placeholder="" type="text" name="partyname" value="" autocomplete="off" />
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <input id="password" placeholder="" type="password" name="password" value="" autocomplete="new-password" style="background-color: #FFFFFF!important;" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly',true);" />
+            </label>
+          </div>
+        </div>
+        <div class="popup-footer">
+          <button class="good" type="button">前行</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="mask"></div>
+</div>
+<% } %>

@@ -4,6 +4,18 @@
   <a href="/">首页</a><span class="crumbs-split"> > </span><span><%= classic.title || '' %></span>
 </div>
 <div class="content">
+  <div class="more-text" style="display: none;">
+    <span>展开全文</span>
+    <i class="iconfont icon-fanhui"></i>
+  </div>
+  <div class="more-mask" style="display: none;"></div>
+  <blockquote>
+    <% let party = classic.mind && classic.mind.party %>
+    <% if (party) { %>
+    <a href="/party/<%= party && party._id %>"><%= party && party.name ? '公号：' + party.name : '' %></a>
+    <% } %>
+    <p><%= classic.mind && classic.mind.content || '' %></p>
+  </blockquote>
   <% if (classic.column_id === 'works') { %>
   <div class="content-header">
     <% if (classic.poster) { %>
@@ -56,12 +68,7 @@
   <% } %>
   <% } %>
   <% } %>
-  <blockquote>
-    <%= classic.mind && (classic.mind.content || (classic.mind[0] && classic.mind[0].content)) || '' %>
-  </blockquote>
-  <div class="content-viewer">
-    <%- classic.content || '' %>
-  </div>
+  <div class="content-viewer"><%- classic.content || '' %></div>
   <% if (sections && sections.length) { %>
   <ol id="sections" class="list">
     <% sections.forEach((section) => { %>
@@ -97,6 +104,52 @@
     <%- include('particles/pagination.html') %>
   </ol>
   <% } %>
+</div>
+<div id="reply" class="reply">
+  <form method="post" action="/mind/<%= classic.mind && classic.mind._id %>/reply">
+    <input type="hidden" name="column_id" value="sentence" />
+    <input type="hidden" name="receiver_id" value="<%= classic.mind && classic.mind.creator_id || '' %>" />
+    <input type="hidden" name="parent_id" value="<%= classic.mind && classic.mind._id || '' %>" />
+    <input type="hidden" name="parent_type" value="mind" />
+    <div class="form-group" style="display: none;">
+      <input name="title" type="text" placeholder="标题" value="">
+    </div>
+    <div class="form-group">
+      <% if (!user) { %>
+      <div class="login-area">
+        <a href="/login" class="login">需要麻烦您先登录~</a>
+      </div>
+      <% } %>
+      <textarea name="content" rows="6" placeholder="说些什么..."></textarea>
+      <div class="tips"></div>
+    </div>
+    <% if (user) { %>
+    <button type="submit" disabled>
+      送出
+    </button>
+    <% } %>
+  </form>
+  <ol class="list">
+    <% if (classic.replies && classic.replies.length) { %>
+    <% classic.replies.forEach((reply) => { %>
+    <li class="item fade">
+      <div class="reply-content">
+        <%= reply.summary || '' %>
+      </div>
+      <div class="bottom-bar">
+        <div class="party-name"><%= reply.party && reply.party.name ? '公号：' + reply.party.name : '' %></div>
+        <!--<div class="right-ctrl">
+          <a href="javascript:;" class="comfort">
+            <i class="iconfont icon-icon_huifu-xian"></i>
+            回复
+          </a>
+        </div>-->
+      </div>
+      <hr />
+    </li>
+    <% }) %>
+    <% } %>
+  </ol>
 </div>
 <% } else { %>
   <div class="content">

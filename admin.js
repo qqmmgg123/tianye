@@ -86,6 +86,9 @@ async function addVersion(newVersion, message) {
   process.exit()
 }
 
+db.users.find().forEach(function(item){db.parties.insert({name: item.nickname,creator_id:item._id,createdAt:new Date(),updatedAt:new Date()})});
+db.minds.find().forEach(function(item){var doc = db.parties.findOne({creator_id:item.creator_id});if(doc){db.minds.updateOne({_id:item._id}, {$set:{party_id:doc._id}});}});
+
 program
   .version('0.1.0')
   .option('-a, --add-super [phone]', 'Add super')

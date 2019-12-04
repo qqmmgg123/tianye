@@ -1,22 +1,25 @@
 const Schema = require('mongoose').Schema
 const constant = require('../settings/const')
 
-let keywordSchema = new Schema({
+let knowledgeSchema = new Schema({
   name: { 
     type: String, 
     required: [true, constant.MISS_PARAMS], 
+    unique : true,
+    dropDups: true,
     trim: true
   },
-  mind_id: Schema.Types.ObjectId,
   creator_id: Schema.Types.ObjectId,
-  visits: { 
-    type: Number,
-    default: 0
-  }
+  content: { 
+    type: String, 
+    required: [
+      true, 
+      constant.NO_CONTENT
+    ],
+    trim: true
+  },
 }, {
   timestamps: true
 })
 
-keywordSchema.index({ name: 1, mind_id: 1 }, { unique: true });
-
-module.exports = keywordSchema
+module.exports = knowledgeSchema

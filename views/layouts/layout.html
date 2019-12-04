@@ -8,6 +8,34 @@
   <% } else { %>
   <div class="main">
     <div class="view-area">
+      <% let pages = ['login.html', 'signup.html', 'classicmodify.html', 'classic.html', 'mind.html'] %>
+      <% if (pages.indexOf(particles) === -1) { %>
+      <div class="top-ctrl-bar">
+        <div class="button-area">
+          <a href="/mind/create" class="button">
+            <i class="iconfont icon-Smile"></i>
+            分享感悟
+          </a>
+          <% if (!user) { %>
+          <a href="/login" class="button">
+            <i class="iconfont icon-Sad"></i>
+            诉说烦恼
+          </a>
+          <% } else { %>
+          <a href="javascript:;" id="talkTrouble" class="button">
+            <i class="iconfont icon-Sad"></i>
+            诉说烦恼
+          </a>
+          <% } %>
+          <a href="/classic/create" class="button">
+            <i class="iconfont icon-external-link-outline"></i>
+            推荐鸡汤
+          </a>
+          <!--<a href="/classic/create" class="button">整理知识</a>-->
+        </div>
+      </div>
+      <hr>
+      <% } %>
       <%- include(tempRoot + particles) %>
     </div>
   </div>
@@ -15,14 +43,32 @@
   <% if (particles === 'classics.html') { %>
   <%- include(tempRoot + 'particles/footer.html') %>
   <% } %>
+  <% if (need_dom4_script) { %>
+  <script src="//image.tianyeapp.top/dom4.js">/* DOM4 */</script>
+  <% } %>
+  <script src="//image.tianyeapp.top/axios.min.js"></script>
+  <% if (['classicmodify.html', 'sectioneditor.html'].indexOf(particles) !== -1) { %>
+  <!-- Include the Quill library -->
+  <script src="//image.tianyeapp.top/quill.min.js"></script>
+  <% } %>
+  <% if (is_wechat) { %>
+  <script src='//res2.wx.qq.com/open/js/jweixin-1.4.0.js'></script>
+  <% } %>
   <script>
-    /* window.onerror = function(message, source, lineno, colno, error) {
-      _hmt && _hmt.push(['_trackEvent', 'website', 'error', message]);
+    /* if (navigator.userAgent.indexOf('UCBrowser') > -1) {
+      window.onerror = function(message, source, lineno, colno, error) {
+        alert([message, source, lineno, colno, error].join(':'))
+        _hmt && _hmt.push(['_trackEvent', 'website', 'error', message]);
+      }
     } */
     var globalDataStr='<%= globalData %>';
   </script>
   <% if (need_global_script && env === 'production') { %>
   <script src="/static/js/global.js?v=20190502316"></script>
+  <% let pages = ['login.html', 'signup.html', 'classicmodify.html', 'classic.html', 'mind.html'] %>
+  <% if (pages.indexOf(particles) === -1) { %>
+  <script src="/static/js/talktrouble.js?v=20190502406"></script>
+  <% } %>
   <% } %>
   <% if (need_auto_script) { %>
   <script src="<%= pageScriptFile %>?v=20190502406"></script>

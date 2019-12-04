@@ -1,14 +1,20 @@
 const Schema = require('mongoose').Schema
-const constant = require('../settings/const')
+, constant = require('../settings/const')
+, maxlength = constant.SUMMARY_LIMIT - 3
 
 let classicSchema = new Schema({
   title: { 
     type: String, 
+    maxlength,
     trim: true
   },
   summary: { 
     type: String, 
     required: [true, constant.MISS_PARAMS],
+    /* maxlength: [ 
+      maxlength, 
+      constant.OVER_MAX_SUMMARYLENGTH 
+    ], */
     trim: true
   },
   original_author: {
@@ -48,12 +54,6 @@ let classicSchema = new Schema({
 classicSchema.virtual('author', {
   ref: 'User',
   localField: 'creator_id',
-  foreignField: '_id'
-})
-
-classicSchema.virtual('mind', {
-  ref: 'Mind',
-  localField: 'mind_id',
   foreignField: '_id'
 })
 

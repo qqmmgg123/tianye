@@ -17,6 +17,22 @@
   <meta name="x5-fullscreen" content="true">
   <title><%= title %></title>
   <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
+  <script>
+    var baseSize = 32;
+    // 设置 rem 函数
+    function setRem () {
+      // 当前页面宽度相对于 375 宽的缩放比例，可根据自己需要修改。
+      var scale = Math.min(document.documentElement.clientWidth, 375) / 375
+      // 设置页面根节点字体大小
+      document.documentElement.style.fontSize = (baseSize * Math.min(scale, 2)) + 'px'
+    }
+    // 初始化
+    setRem();
+    // 改变窗口大小时重新设置 rem
+    window.onresize = function () {
+      setRem();
+    }
+  </script>
   <link href="//at.alicdn.com/t/font_942830_m05r8d3953.css" rel="stylesheet">
   <% if (env === 'production') { %>
   <link href="<%= globalStyleFile %>?v=201905030333" rel="stylesheet">
@@ -38,16 +54,4 @@
     }
   </style>
   <% } %>
-  <% if (need_dom4_script) { %>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/dom4/2.0.0/dom4.js">/* DOM4 */</script>
-  <% } %>
-  <script src="//unpkg.com/axios/dist/axios.min.js"></script>
-  <% if (['classicmodify', 'sectioneditor'].indexOf(particles)) { %>
-  <!-- Include the Quill library -->
-  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-  <% } %>
-  <% if (is_wechat) { %>
-  <script src='//res2.wx.qq.com/open/js/jweixin-1.4.0.js'></script>
-  <% } %>
-
 </head>

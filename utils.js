@@ -4,6 +4,17 @@ const crypto = require('crypto')
 , striptags = require('./striptags')
 
 module.exports = {
+  /**
+   * @getClientIP
+   * @desc 获取用户 ip 地址
+   * @param {Object} req - 请求
+   */
+  getClientIP(req) {
+    return (req.headers['x-forwarded-for'] || // 判断是否有反向代理 IP
+      req.connection.remoteAddress || // 判断 connection 的远程 IP
+      req.socket.remoteAddress || // 判断后端的 socket 的 IP
+      (req.connection.socket && req.connection.socket.remoteAddress) || '').match(/\d+.\d+.\d+.\d+/)
+  },
   clearFormat: function(html) { 
     return html 
     ? striptags(html).replace(/^(&nbsp;|\s|\uFEFF|\xA0)+|(&nbsp;|\s|\uFEFF|\xA0)+$/g, '') 

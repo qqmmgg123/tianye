@@ -65,6 +65,7 @@ function getCond(uid, type) {
     summary: 1,
     type: '$$type',
     url: '$_id',
+    column_id: 1,
     perm_id: 1,
     poster: 1
   }}

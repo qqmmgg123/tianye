@@ -10,18 +10,19 @@
   .content-viewer {
     font-size: 16px;
     margin-top: 10px;
-    .pagination {
-      margin-top: 20px;
-      overflow: hidden;
-      .page-num {
-        margin-left: 0;
-      }
-      .prev-section {
-        float: left;
-      }
-      .next-section {
-        float: right;
-      }
+  }
+
+  .pagination {
+    margin-top: 20px;
+    overflow: hidden;
+    .page-num {
+      margin-left: 0;
+    }
+    .prev-section {
+      float: left;
+    }
+    .next-section {
+      float: right;
     }
   }
 }

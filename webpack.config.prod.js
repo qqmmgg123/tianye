@@ -95,6 +95,12 @@ module.exports = merge(webpackBaseConfig, {
           chunks: 'initial',
           name: 'global',
           enforce: true,
+        },
+        'talktrouble': {
+          test: /talktrouble/, // 直接使用 test 来做路径匹配
+          chunks: 'initial',
+          name: 'talktrouble',
+          enforce: true,
         }
       }
     }

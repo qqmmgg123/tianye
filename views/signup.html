@@ -1,16 +1,16 @@
 <form action="/signup" method="post" autocomplete="off">
   <p class="server-info"><%= info %></p>
   <input type="password" style="display: none;"/>
-  <p class="form-group">
+  <div class="form-group">
     <label>
-      <input placeholder="<%= nicknameHolder %>" type="text" name="nickname" value="" autocomplete="off" />
+      <input placeholder="<%= partynameHolder %> [ 用于发布对外内容 ]" type="text" name="partyname" value="" autocomplete="off" />
     </label>
-  </p>
-  <p class="form-group">
+  </div>
+  <div class="form-group">
     <label>
       <input id="password" placeholder="<%= passwordHolder %>" type="password" name="password" value="" autocomplete="new-password" style="background-color: #FFFFFF!important;" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly',true);" />
     </label>
-  </p>
+  </div>
   <div class="form-group">
     <div class="phone-input">
       <div class="select">

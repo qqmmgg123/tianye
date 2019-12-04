@@ -1,13 +1,24 @@
 <% if (mind) { %>
 <div class="crumbs">
-  <a href="/">首页</a><span class="crumbs-split"> > </span><span><%= mind.title || '' %></span>
+  <a href="/">首页</a><span class="crumbs-split"> > </span><span><%= mind.title || mind.summary || '' %></span>
 </div>
 <hr>
 <div class="content">
-  <h1><%= mind.title || '' %></h1>
+  <% if (mind.title) { %>
+  <h1><%= mind.title %></h1>
+  <% } %>
   <% if (user && user.id && mind.creator_id.equals(user.id)) { %>
   <div class="content-ctrl">
-    <a href="/mind/<%= mind._id %>/modify" class="button">编辑</a>
+  <% if (mind.type_id !== 'help') { %>
+  <a href="/mind/<%= mind._id %>/modify" class="button">编辑</a>
+  <% } else { %>
+  <a 
+  class="button"
+  rel-ctl="trouble-modify"
+  data-id="<%= mind._id %>" 
+  href="javascript:;"
+  >修改</a>
+  <% } %>
   </div>
   <% } %>
   <!--<% if (mind.type_id === 'share') { %>
@@ -15,7 +26,9 @@
   <% } else if (mind.type_id === 'help') { %>
   <h2>—— 烦恼 ——</h2>
   <% } %>-->
-  <div class="content-viewer"><%- mind.content || '' %><!--<a class="download-btn button" href="/">下载田野APP，结交知心朋友 -></a>--></div>
+  <% if (mind.content) { %>
+  <div class="content-viewer"><div class="more-text" style="display: none;"><span>展开全文</span><i class="iconfont icon-fanhui"></i></div><div class="more-mask" style="display: none;"></div><%- mind.content %></div>
+  <% } %>
 </div>
 <!--<div class="ctrl-bar">
   <a href="/">
@@ -41,6 +54,64 @@
     </div>
   </a>
 </div>-->
+<div id="reply" class="reply">
+  <form method="post" action="/mind/<%= mind._id %>/reply">
+    <input type="hidden" name="column_id" value="sentence" />
+    <input type="hidden" name="receiver_id" value="<%= mind.creator_id || '' %>" />
+    <input type="hidden" name="parent_id" value="<%= mind._id || '' %>" />
+    <input type="hidden" name="parent_type" value="mind" />
+    <div class="form-group" style="display: none;">
+      <input name="title" type="text" placeholder="标题" value="">
+    </div>
+    <div class="form-group">
+      <% if (!user) { %>
+      <div class="login-area">
+        <a href="/login" class="login">需要麻烦您先登录~</a>
+      </div>
+      <% } %>
+      <% if (mind.type_id === 'help') { %>
+      <% if (user && user.id && mind.creator_id.equals(user.id)) { %>
+      <textarea name="content" rows="6" placeholder="继续跟进烦恼..."></textarea>
+      <% } else { %>
+      <textarea name="content" rows="6" placeholder="安慰一下作者..."></textarea>
+      <% } %>
+      <% } else { %>
+      <textarea name="content" rows="6" placeholder="说些什么..."></textarea>
+      <% } %>
+      <div class="tips"></div>
+    </div>
+    <% if (user) { %>
+    <button type="submit" disabled>
+      送出
+    </button>
+    <% } %>
+  </form>
+  <ol class="list">
+    <% if (mind.replies && mind.replies.length) { %>
+    <% mind.replies.forEach((reply) => { %>
+    <li class="item fade">
+      <div class="reply-content">
+        <%= reply.summary || '' %>
+      </div>
+      <div class="bottom-bar">
+        <% if (reply.creator_id.equals(mind.creator_id)) { %>
+        <div class="party-name">作者</div>
+        <% } else { %>
+        <a href="/party/<%= reply.party && reply.party._id %>" class="party-name"><%= reply.party && reply.party.name ? '公号：' + reply.party.name : '' %></a>
+        <% } %>
+        <!--<div class="right-ctrl">
+          <a href="javascript:;" class="comfort">
+            <i class="iconfont icon-icon_huifu-xian"></i>
+            回复
+          </a>
+        </div>-->
+      </div>
+      <hr />
+    </li>
+    <% }) %>
+    <% } %>
+  </ol>
+</div>
 <% } else { %>
   <div class="content">
     <h1>: ( 您访问的内容不存在~</h1>

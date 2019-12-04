@@ -1,3 +1,27 @@
+<div class="mind-header">
+  <% if (currentPage === 'mind') { %>
+  <a href="/mind">我的公号：<%= partyname %></a>
+  <a href="/mind?tab=trouble">我的烦恼</a>
+  <% } else if(currentPage === 'party') { %>
+  <a href="/mind">公号：<%= partyname %></a>
+  <% } %>
+</div>
+<hr>
+<% if (keywordList && keywordList.length) { %>
+<div class="tags">
+  <div class="keyword-list">
+    <% keywordList.forEach(keyword => { %>
+    <% let params= [ currKeyword === keyword._id ? '' : 'keywords=' + keyword._id ].filter(item => !!item); %>
+    <a class="<%= currKeyword === keyword._id ? 'active' : '' %>" href="<%= params.length > 0 ? '?' + params.join('&') : '/' %>"><%= keyword._id %><%- currKeyword === keyword._id ? '<i class="iconfont icon-guanbi"></i>' : '' %></a>
+    <% }) %>
+  </div>
+  <div class="show-more" style="display: none;">
+    <span>点击展开更多</span>
+    <i class="iconfont icon-fanhui"></i>
+  </div>
+</div>
+<hr>
+<% } %>
 <ol id="diarys" class="list">
   <% if (minds && minds.length) { %>
   <% minds.forEach((mind) => { %>
@@ -7,17 +31,44 @@
       <span class="datetime"><%= dateFormat(mind.state_change_date) %></span>
       <% if (user && user.id && mind.creator_id.equals(user.id)) { %>
       <div class="right-ctrl">
+        <% if (mind.type_id !== 'help') { %>
+        <% if (mind.quote) { %>
+        <a href="/classic/<%= mind.quote._id %>/modify">编辑</a>
+        <% } else { %>
+        <a href="/mind/<%= mind._id %>/modify">编辑</a>
+        <% } %>
+        <% } else { %>
         <a 
-        href="/mind/<%= mind._id %>/modify">
-          编辑
-        </a>
-        <a 
+        rel-ctl="trouble-modify"
+        data-id="<%= mind._id %>" 
+        href="javascript:;"
+        >修改</a>
+        <% } %>
+        <a
         rel-ctl="diary-remove"
         data-hiding="false"
         data-id="<%= mind._id %>" 
         href="javascript:;">
-          删除
+        删除
         </a>
+      </div>
+      <% } else { %>
+      <div class="right-ctrl">
+        <% if (mind.type_id === 'help') { %>
+        <a href="/mind/<%= mind._id %>#reply" class="comfort">
+          <i class="iconfont icon-karma"></i>
+          慰藉
+        </a>
+        <% } else { %>
+        <% if (mind.quote) { %>
+        <a href="/classic/<%= mind.quote._id %>#reply" class="comfort">
+        <% } else { %>
+        <a href="/mind/<%= mind._id %>#reply" class="comfort">
+        <% } %>
+          <i class="iconfont icon-icon_huifu-xian"></i>
+          评论
+        </a>
+        <% } %>
       </div>
       <% } %>
     </div>
@@ -25,8 +76,8 @@
   </li>
   <% }) %>
   <% } else { %>
-    <li>
-      <center>抱歉，发文和推文功能正在升级中...，不久将会开放，敬请谅解。</center>
+    <li class="no-data">
+      抱歉，当前没有内容。
     </li>
   <% } %>
   <%- include(tempRoot + 'particles/pagination.html') %>

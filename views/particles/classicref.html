@@ -1,23 +1,20 @@
 <blockquote>
-  <% if (mind.title) { %>
-  <a href="/mind/<%= mind._id %>" class="main-content<% if (mind.quote && mind.quote.poster) { %> quote<% } %>">
+  <% if (mind.column_id === 'article') { %>
+  <a href="/mind/<%= mind._id %>" class="main-content article<% if (mind.poster) { %> has-pic<% } %><% if (mind.quote && mind.quote.column_id === 'works') { %> quote<% } %>">
   <% } else { %>
-  <div class="main-content<% if (mind.quote && mind.quote.poster) { %> quote<% } %>">
+  <div class="main-content <% if (mind.poster) { %> has-pic<% } %><% if (mind.quote && mind.quote.column_id === 'works') { %> quote<% } %>">
   <% } %>
-    <% if (mind.title) { %>
+    <div class="text">
+    <% if (mind.column_id === 'article' && mind.title) { %>
     <div class="more-mask"></div>
     <div href="/mind/<%= mind._id %>" class="title">
       <%= mind.title %>
     </div>
     <% } %>
-    <% if (mind.title) { %>
-    <p class="summary minor">
-      <%= mind.summary || '' %>
-    </p>
+    <% if (mind.column_id === 'article' && mind.title) { %>
+    <p class="summary minor"><%= mind.summary || '' %></p>
     <% } else { %>
-    <p class="summary<% if (mind.quote && !mind.quote.poster) { %> lower<% } %>">
-      <%= mind.summary || '' %>
-    </p>
+    <p class="summary<% if (mind.quote && mind.quote.column_id !== 'works') { %> lower<% } %>"><%= mind.summary || '' %></p>
     <% } %>
     <% if (mind.quote) { %>
     <% if (mind.quote.original_author || mind.quote.source) { %>
@@ -30,24 +27,27 @@
       <% } %>
     </div>
     <% } %>
-    <% if (!mind.quote.poster && (mind.quote.title || mind.quote.summary)) { %>
-    <% if (mind.quote.title) { %>
-    <a href="/classic/<%= mind.quote._id %>" class="quote-text">
+    <% if (['sentence', 'article'].indexOf(mind.quote.column_id) !== -1) { %>
+    <% if (mind.quote.column_id === 'article') { %>
+    <a href="/classic/<%= mind.quote._id %>" class="quote-box article<% if (mind.quote.poster) { %> has-pic<% } %>">
     <% } else { %>
-    <div class="quote-text">
+    <div class="quote-box <% if (mind.quote.poster) { %> has-pic<% } %>">
     <% } %>
-      <% if (mind.quote.title) { %>
-      <div class="more-mask"></div>
-      <div href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>" class="quote-title">
-        <%= mind.quote.title %>
+      <div class="quote-text">
+        <% if (mind.quote.column_id === 'article' && mind.quote.title) { %>
+        <div class="more-mask"></div>
+        <div href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>" class="quote-title">
+          <%= mind.quote.title %>
+        </div>
+        <% } %>
+        <% if (mind.quote.summary) { %>
+        <p class="quote-summary<% if (mind.quote.column_id === 'article' && mind.quote.title) { %> minor<% } %>"><%= mind.quote.summary %></p>
+        <% } %>
       </div>
+      <% if (mind.quote.poster) { %>
+      <div class="pic" style="background-image: url('<%= mind.quote.poster || '' %>?imageMogr2/auto-orient|imageMogr2/quality/90!/thumbnail/640x320');"></div>
       <% } %>
-      <% if (mind.quote.summary) { %>
-      <p class="quote-summary<% if (mind.quote.title) { %> minor<% } %>">
-        <%= mind.quote.summary %>
-      </p>
-      <% } %>
-    <% if (mind.quote.title) { %>
+    <% if (mind.quote.column_id === 'article') { %>
     </a>
     <% } else { %>
     </div>
@@ -58,13 +58,16 @@
       推荐的内容不存在或被删除
     </div>
     <% } %>
-  <% if (mind.title) { %>
+    </div>
+    <% if (mind.poster) { %>
+    <div class="pic" style="background-image: url('<%= mind.poster || '' %>?imageMogr2/auto-orient|imageMogr2/quality/90!/thumbnail/640x320');"></div>
+    <% } %>
+  <% if (mind.column_id === 'article') { %>
   </a>
   <% } else { %>
   </div>
   <% } %>
-  <% if (mind.quote) { %>
-  <% if (mind.quote.poster) { %>
+  <% if (mind.quote && mind.quote.column_id === 'works') { %>
   <a class="quote-bg" href="/<%= mind.quote.type %>/<%= mind.quote.url || '' %>">
     <i class="iconfont icon-external-link-outline"></i>
     <div class="pic" style="background-image: url('<%= mind.quote.poster || '' %>?imageMogr2/auto-orient|imageMogr2/quality/90!/thumbnail/180x220');"></div>
@@ -72,6 +75,5 @@
     <div class="quote-title"><%= mind.quote.title || '' %></div>
     <% } %>
   </a>
-  <% } %>
   <% } %>
 </blockquote>

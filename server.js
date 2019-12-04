@@ -16,6 +16,7 @@ const pageAuth = require('./pageAuth')
 const fullRenderer = require('./fullRenderer')
 const mongoose = require('mongoose')
 const User = require('./models/user')
+const Party = require('./models/party')
 const Verification = require('./models/verification')
 const Mind = require('./models/mind')
 const Keyword = require('./models/keyword')
@@ -28,7 +29,7 @@ const Translate = require('./models/translate')
 const Reply = require('./models/reply')
 const Friend = require('./models/friend')
 const session = require('koa-session')
-const { pageRange, getDate, pbkdf2, clearFormat } = require('./utils')
+const { pageRange, getDate, pbkdf2, clearFormat, /*getClientIP*/ } = require('./utils')
 const crypto = require('crypto')
 const path = require('path')
 const { staticDir } = require('./config/remotepath')
@@ -37,6 +38,8 @@ const utils = require('./utils')
 const signature = require('./signature')
 const qiniu = require('qiniu')
 const formidable = require('formidable')
+const shortid = require('shortid')
+// const geoip = require('geoip-lite');
 // 阿里短信服务框架
 const Core = require('@alicloud/pop-core')
 
@@ -122,6 +125,9 @@ app.use(bodyParser({
 
 // 保存全局模版数据
 app.use((ctx, next) => {
+  console.log()
+  //let ip = getClientIP(ctx.req)
+  //let geo = geoip.lookup(ip)
   let user = ctx.cookies.request.user
   let cssExt = 'css'
   ctx.state.env = process.env.NODE_ENV
@@ -146,6 +152,25 @@ const passport = require('koa-passport')
 app.use(passport.initialize())
 app.use(passport.session())
 
+// 记录当前页面url状态
+router.get([
+  '/',
+  'about',
+  '/appdownload',
+  '/mind/:id',
+  '/karma/fate',
+  '/karma/talk',
+  '/help/:id',
+  '/classic/:id',
+  '/karma/friend',
+  '/mind/create',
+  '/classic/create',
+  '/knowledge/create',
+], (ctx, next) => {
+  ctx.session.currentUrl = ctx.url
+  return next()
+})
+
 // 访问需要验证用户
 router.get([
   '/notification',
@@ -159,6 +184,7 @@ router.get([
   '/mind/create',
   '/mind/:id/modify',
   '/classic/create',
+  '/knowledge/create',
   '/classic/:id/modify',
   '/classic/:id/section/create',
   '/section/:id/modify',
@@ -193,6 +219,7 @@ router.use([
   '/password',
   '/uploadImg',
   '/uploadAudio',
+  '/uploadVideo',
 ], (ctx, next) => {
   let { method } = ctx.request
   if ([
@@ -375,7 +402,7 @@ router.get('/signup', async (ctx) => {
   await ctx.fullRender('signup', {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
-    nicknameHolder: constant.NICKNAME_HOLDER,
+    partynameHolder: constant.PARTYNAME_HOLDER,
     passwordHolder: constant.PASSWORD_HOLDER,
     phoneHolder: constant.PHONE_HOLDER,
     info: ctx.session.info
@@ -387,13 +414,13 @@ router.get('/signup', async (ctx) => {
 // 注册
 router.post('/signup', async (ctx, next) => {
   let { 
-    nickname = '', 
+    partyname = '', 
     password = '',
     phone = '', 
     code = ''
   } = ctx.request.body
 
-  nickname = nickname.trim()
+  partyname = partyname.trim()
   phone = phone.trim()
   code = code.trim()
   let vcode = await Verification.findOne({ 
@@ -431,21 +458,24 @@ router.post('/signup', async (ctx, next) => {
     }
   } else {
     let buf = await crypto.randomBytes(32)
-    let salt = buf.toString('hex')
-    let hash = await pbkdf2(password, salt)
-    await User.create({
+    , salt = buf.toString('hex')
+    , hash = await pbkdf2(password, salt)
+    let newUser = await User.create({
       username: phone,
-      nickname : nickname,
       phone,
       hash: new Buffer(hash, 'binary').toString('hex'),
       salt: salt
+    })
+    await Party.create({
+      name: partyname,
+      creator_id: newUser._id
     })
     await Verification.deleteOne({ 
       phone,
       code: code
     })
     let loginRes = await loginPromise(ctx, 'local')
-    let { success, info, user } = loginRes
+    , { success, info, user } = loginRes
     if (success) {
       if (ctx.state.isXhr) {
         let notification = await getNotification(user._id)
@@ -581,22 +611,6 @@ router.post('/phone/vcode',async (ctx)=>{
       info: '发送手机验证码失败。'
     }
   }
-})
-
-// 记录当前页面url状态
-router.get([
-  '/',
-  'about',
-  '/appdownload',
-  '/mind/:id',
-  '/karma/fate',
-  '/karma/talk',
-  '/help/:id',
-  '/classic/:id',
-  '/karma/friend',
-], (ctx, next) => {
-  ctx.session.currentUrl = ctx.url
-  return next()
 })
 
 // 首页
@@ -1153,7 +1167,7 @@ router.get('/user/search', async (ctx, next) => {
 })
 
 // 心
-router.get('/mind', async (ctx, next) => {
+router.get(['/mind', '/party/:id'], async (ctx, next) => {
   let { user } = ctx.state
   , uid = user && user._id
   , quoteQuery = Mind.quoteQuery(uid)
@@ -1175,8 +1189,123 @@ router.get('/mind', async (ctx, next) => {
   let index = range / 2
   let lastIndex = range - index
   let condition = {
-    creator_id: user._id,
     type_id: 'share'
+  }
+
+  // 分类
+  let keywords = query.keywords && query.keywords.trim() || ''
+
+  // 关键词和内容类别
+  if (keywords) {
+    condition.keywords = keywords
+
+    // 更新关键词访问次数
+    /* await Keyword.findOneAndUpdate({ 
+      name: keywords
+    }, { 
+      $inc: { visits: 1 } 
+    }, {
+      runValidators: true, 
+      new: true,
+      upsert: true
+    }) */
+  }
+
+  let party_id = ctx.params.id
+  , party = null
+  , currentPage = ''
+  if (!party_id) {
+    if (uid) {
+      // 获取公号名
+      let partys = await Party.find({ creator_id: uid }, '_id name')
+      party = partys[0] || null
+      party_id = party && party._id
+      currentPage = 'mind'
+      condition.creator_id = uid
+      // 获取烦恼
+      let { tab } = query
+      if (tab && tab === 'trouble') { 
+        condition.type_id = 'help'
+      } else {
+        party_id && (condition.party_id = mongoose.Types.ObjectId(party_id))
+      }
+    }
+  } else {
+    // 获取公号名
+    let partys = await Party.find({ _id: party_id }, '_id name')
+    party = partys[0] || null
+    currentPage = 'party'
+    party_id && (condition.party_id = mongoose.Types.ObjectId(party_id))
+  }
+
+  let keywordList = []
+  , { tab } = query
+  , isTrouble = tab && tab === 'trouble' && uid
+  if (isTrouble || party_id) {
+    // 查询类别
+    let opts = [
+      { $lookup: {
+        from: Mind.collection.name,
+        let: { 'mind_id': '$mind_id' },
+        pipeline: [
+          { $match: { 
+            $expr: {
+              $eq: [ '$_id', '$$mind_id' ] 
+            }
+          }},
+          { $project: {
+            type_id: 1,
+            party_id: 1
+          }}
+        ],
+        as: 'mind'
+      }}, 
+      { $unwind: '$mind' }, 
+      { 
+        $group: { 
+          _id: '$name', 
+          visits: { $sum: '$visits' },
+          total: { $sum: 1 }, 
+          createdAt: { $last: '$createdAt' }
+        } 
+      },
+      { $project: { 
+        _id: 1,
+        total: 1,
+        visits: 1,
+        createdAt: 1,
+        order: { 
+          $cond : [ { $eq : ['$_id', keywords] }, 1 , 0 ]
+        },
+      }},
+      // 哪个更重要，怎么比重
+      { $sort: { order: -1, createdAt: -1, total: -1, visits: -1 } },
+    ]
+    if (isTrouble) {
+      // 获取烦恼
+      if (tab && tab === 'trouble') {
+        opts.splice(2, 0, { $match: {
+          $expr: {
+            $and: [{
+              $eq: [ '$mind.type_id', 'help' ]
+            }, {
+              $eq: [ '$creator_id',  uid]
+            }]
+          }
+        }})
+      }
+    } else {
+      opts.splice(2, 0, { $match: {
+        $expr: {
+          $and: [{
+            $eq: ['$mind.party_id', party_id]
+          }, {
+            $eq: [ '$creator_id',  uid]
+          }]
+        }
+      }})
+    }
+    keywordList = await Keyword.aggregate(opts)
   }
 
   // 心念总数
@@ -1201,12 +1330,12 @@ router.get('/mind', async (ctx, next) => {
   }
 
   // 查找所有记录
-  let friendshipQuery = Friend.friendshipQuery(uid)
-  , minds = await Mind.aggregate([
+  // let friendshipQuery = Friend.friendshipQuery(uid)
+  let config = [
     { $match: condition },
-    Visitor.queryVisitor(uid),
+    // Visitor.queryVisitor(uid),
     // 查找最新回复
-    { $lookup: {
+    /* { $lookup: {
       from: Reply.collection.name,
       let: { 'mind_id': '$_id' },
       pipeline: [
@@ -1254,7 +1383,7 @@ router.get('/mind', async (ctx, next) => {
         }},
       ],
       as: 'new_reply'
-    }},
+    }}, */
     // 获取引用
     ...quoteQuery,
     { $project: {
@@ -1268,16 +1397,16 @@ router.get('/mind', async (ctx, next) => {
       creator_id: 1,
       created_date: 1,
       updated_date: 1,
-      visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
+      //visitor: { $cond : [ { $eq : ['$visitor', []]}, [ null ], '$visitor'] },
       quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
       quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
-      new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
-      last_reply: { $cond : [ { $eq : ['$last_reply', []]}, [ null ], '$last_reply'] },
+      //new_reply: { $cond : [ { $eq : ['$new_reply', []]}, [ null ], '$new_reply'] },
+      //last_reply: { $cond : [ { $eq : ['$last_reply', []]}, [ null ], '$last_reply'] },
       state_change_date: 1
     }},
-    { $unwind: '$visitor' },
-    { $unwind: '$new_reply' },
-    { $unwind: '$last_reply' },
+    //{ $unwind: '$visitor' },
+    //{ $unwind: '$new_reply' },
+    //{ $unwind: '$last_reply' },
     { $unwind: '$quote_mind' },
     { $unwind: '$quote_classic' },
     { $project: {
@@ -1293,22 +1422,28 @@ router.get('/mind', async (ctx, next) => {
       updated_date: 1,
       has_new: 1,
       quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
-      new_reply: 1,
-      last_reply: 1,
-      reply_visit_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
-      new_reply_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', '$created_date'] },
-      state_change_date: { $cond : [ { $ne : ['$last_reply', null]}, '$last_reply.created_date', '$state_change_date'] },
+      //new_reply: 1,
+      //last_reply: 1,
+      //reply_visit_date: { $cond : [ { $ne : ['$visitor', null]}, '$visitor.visited_date', '$created_date'] },
+      ///new_reply_date: { $cond : [ { $ne : ['$new_reply', null]}, '$new_reply.created_date', '$created_date'] },
+      //state_change_date: { $cond : [ { $ne : ['$last_reply', null]}, '$last_reply.created_date', '$state_change_date'] },
+      state_change_date: 1
     }},
     { $sort: { state_change_date: -1 } },
     { $skip: skip },
     { $limit: limit }
-  ])
+  ]
+  let minds = await Mind.aggregate(config)
 
   await ctx.fullRender('diary', {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
+    partyname: party && party.name,
     features: constant.FEATURES,
     noDataTips: constant.NO_MIND,
+    currKeyword: keywords || '',
+    keywordList,
+    currentPage,
     pageInfo,
     minds
   })
@@ -1335,11 +1470,15 @@ router.get(['/', '/earth'], async (ctx, next) => {
   let tag = query.tag
   , keywords = query.keywords && query.keywords.trim() || ''
   , matchCon = {
-    type_id: 'share'
+    type_id: { $in: ['share', 'help'] }
   }
 
   if (tag) {
-    if (tag === 'sentence') {
+    if (tag === 'feeling') {
+      matchCon.type_id = 'share'
+    } else if (tag === 'trouble') {
+      matchCon.type_id = 'help'
+    } else if (tag === 'sentence') {
       matchCon.$or = [
         {
           $and: [
@@ -1364,25 +1503,83 @@ router.get(['/', '/earth'], async (ctx, next) => {
   // 关键词和内容类别
   if (keywords) {
     matchCon.keywords = keywords
+
+    // 更新关键词访问次数
+    /* await Keyword.findOneAndUpdate({ 
+      name: keywords
+    }, { 
+      $inc: { visits: 1 } 
+    }, {
+      runValidators: true, 
+      new: true,
+      upsert: true
+    }) */
   }
 
   // 查询类别
-  const keywordList = await Keyword.aggregate([
+  let opts = [
     { 
       $group: { 
         _id: '$name', 
-        total: { $sum: 1 } 
+        visits: { $sum: '$visits' },
+        total: { $sum: 1 }, 
+        createdAt: { $last: '$createdAt' }
       } 
     },
     { $project: { 
       _id: 1,
-      total: 1, 
+      total: 1,
+      visits: 1,
+      createdAt: 1,
       order: { 
         $cond : [ { $eq : ['$_id', keywords] }, 1 , 0 ]
-      }
+      },
     }},
-    { $sort: { order: -1, total: -1, createdAt: -1 } },
-  ])
+    // 哪个更重要，怎么比重
+    { $sort: { order: -1, createdAt: -1, total: -1, visits: -1 } },
+  ]
+  if (tag) {
+    if (tag === 'feeling') {
+      opts.unshift({ $match: {
+        $expr: {
+          $eq: [ '$mind.type_id', 'share' ]
+        }
+      }})
+    } else if (tag === 'trouble') {
+      opts.unshift({ $match: {
+        $expr: {
+          $eq: [ '$mind.type_id', 'help' ]
+        }
+      }})
+    } else {
+      opts.unshift({ $match: {
+        $expr: {
+          $or: [
+            { $eq: [ '$mind.column_id', tag ] },
+            { $eq: [ '$mind.ref_column', tag ] },
+          ]
+        }
+      }})
+    }
+    opts.unshift({ $lookup: {
+      from: Mind.collection.name,
+      let: { 'mind_id': '$mind_id' },
+      pipeline: [
+        { $match: { 
+          $expr: {
+            $eq: [ '$_id', '$$mind_id' ] 
+          }
+        }},
+        { $project: {
+          column_id: 1,
+          ref_column: 1,
+          type_id: 1
+        }}
+      ],
+      as: 'mind'
+    }}, { $unwind: '$mind' })
+  }
+  const keywordList = await Keyword.aggregate(opts)
 
   // 心念总数
   let total = await Mind.countDocuments(matchCon)
@@ -1394,46 +1591,45 @@ router.get(['/', '/earth'], async (ctx, next) => {
   // 查找所有记录
   let condition = []
   , match = { $match: matchCon }
-  , project = { 
-    '$project': {
-      '_id': 1, 
-      'type_id': 1, 
-      'column_id': 1, 
-      'title': 1, 
-      'ref_type': 1,
-      'content': 1, 
-      'is_extract': 1, 
-      'summary': 1, 
-      'keywords': 1,
-      'perm_id': 1,
-      'behalf': 1,
-      'quote_mind': { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
-      'quote_classic': { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
-      'created_date': 1, 
-      'state_change_date': 1,
-      'creator_id': 1
-    }
+  , project = {
+    _id: 1, 
+    type_id: 1, 
+    column_id: 1, 
+    party: { $cond : [ { $eq : ['$party', []]}, [ null ], '$party'] },
+    title: 1, 
+    poster: 1,
+    ref_type: 1,
+    content: 1, 
+    is_extract: 1, 
+    summary: 1, 
+    keywords: 1,
+    perm_id: 1,
+    behalf: 1,
+    created_date: 1, 
+    state_change_date: 1,
+    creator_id: 1
+  }
+  , initProject = { 
+    $project: Object.assign({}, project, {
+      quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+      quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
+    })
   }
 
   if (uid) {
-    project.$project.recipient = { 
-      $cond : [ { $eq : ['$recipient', []]}, [ null ], '$recipient'] 
-    }
-    project.$project.requester = { 
-      $cond : [ { $eq : ['$requester', []]}, [ null ], '$requester'] 
-    }
     condition = [
       match,
-      ...Friend.friendshipQuery(uid),
+      // 获取公号信息
+      Party.partyInfoQuery(),
       // 获取引用
       ...Mind.quoteQuery(uid),
-      project,
-      { $unwind: '$recipient'},
-      { $unwind: '$requester'},
+      initProject,
+      { $unwind: '$party'},
       { $unwind: '$quote_mind'},
       { $unwind: '$quote_classic'},
       {
-        $project: Object.assign({}, project.$project, {
+        $project: Object.assign({}, project, {
+          party: 1,
           quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         })
       },
@@ -1445,13 +1641,17 @@ router.get(['/', '/earth'], async (ctx, next) => {
   else {
     condition = [
       match,
+      // 获取公号
+      Party.partyInfoQuery(),
       // 获取引用
       ...Mind.quoteQuery(uid),
-      project, 
+      initProject, 
+      { $unwind: '$party'},
       { $unwind: '$quote_mind'},
       { $unwind: '$quote_classic'},
       {
-        $project: Object.assign({}, project.$project, {
+        $project: Object.assign({}, project, {
+          party: 1,
           quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         })
       },
@@ -1459,11 +1659,6 @@ router.get(['/', '/earth'], async (ctx, next) => {
       { '$skip' : skip },
       { "$limit": limit }
     ]
-  }
-
-  // 关键词和类别
-  if (keywords) {
-    condition.unshift({ $unwind: "$keywords" })
   }
 
   let minds = await Mind.aggregate(
@@ -2248,13 +2443,68 @@ router.get('/mind/create', async (ctx, next) => {
 // 尘心念展示
 router.get('/mind/:id', async (ctx, next) => {
   let mindId = ctx.params.id
-  , { user } = ctx.state
-  , uid = user && user._id
+  //, { user } = ctx.state
+  //, uid = user && user._id
+  // 分页
+  , { query } = ctx.request
+  , page = +query.page || 1
+  , limit = +query.limit || constant.LIST_LIMIT
+  , skip = (page - 1) * limit
   , _mindId = mongoose.Types.ObjectId(mindId)
+  , total = Reply.countDocuments({
+    parent_id: _mindId
+  })
+  , totalPage = Math.ceil(total / limit)
+  , nextPage = page < totalPage ? page + 1 : 0
+  , pageInfo = { nextPage }
+  //, quoteQuery = Mind.quoteQuery(uid)
   , minds = await Mind.aggregate(
     [
       { $match: { _id: _mindId } },
-      ...Mind.quoteQuery(uid),
+      //...Mind.quoteQuery(uid),
+      { $lookup: {
+        from: Reply.collection.name,
+        let: { 'mind_id': '$_id' },
+        pipeline: [
+          { $match: { parent_id: _mindId } },
+          // 获取公号信息
+          Party.partyInfoQuery(),
+          // 获取引用
+          //...quoteQuery,
+          { $project: {
+            _id: 1,
+            title: 1,
+            summary: 1,
+            type: 1,
+            sub_type: 1,
+            reply_type: 1,
+            parent_id: 1,
+            creator_id: 1,
+            party: { $cond : [ { $eq : ['$party', []]}, [ null ], '$party'] },
+            //quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+            //quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
+          }},
+          { $sort: { created_date: -1 } },
+          { $skip: skip },
+          // { $limit: limit },
+          { $unwind: '$party'},
+          //{ $unwind: '$quote_mind' },
+          //{ $unwind: '$quote_classic' },
+          { $project: {
+            _id: 1,
+            title: 1,
+            summary: 1,
+            type: 1,
+            sub_type: 1,
+            reply_type: 1,
+            creator_id: 1,
+            created_date: 1,
+            party: 1,
+            //quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
+          }},
+        ],
+        as: 'replies'
+      }},
       { $project: {
         _id: 1,
         type_id: 1,
@@ -2262,15 +2512,16 @@ router.get('/mind/:id', async (ctx, next) => {
         title: 1,
         summary: 1, 
         content: 1,
-        quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
-        quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
+        //quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+        //quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
         perm_id: 1,
         behalf: 1,
         creator_id: 1,
+        replies: '$replies',
         state_change_date: 1
       } },
-      { $unwind: '$quote_mind' },
-      { $unwind: '$quote_classic' },
+      //{ $unwind: '$quote_mind' },
+      //{ $unwind: '$quote_classic' },
       { $project: {
         _id: 1,
         type_id: 1,
@@ -2278,17 +2529,18 @@ router.get('/mind/:id', async (ctx, next) => {
         title: 1,
         summary: 1, 
         content: 1,
-        quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
+        //quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
         perm_id: 1,
         behalf: 1,
         creator_id: 1,
+        replies: 1,
         state_change_date: 1
       } }
     ]
   )
     
-  let mind = minds && minds.length && minds[0]
-  , ua = ctx.request.headers['user-agent'].toLowerCase()
+  let mind = minds && minds[0]
+  //, ua = ctx.request.headers['user-agent'].toLowerCase()
   , is_wechat = false// ua.indexOf("micromessenger") > 0
   ctx.state = Object.assign(ctx.state, {
     title: [
@@ -2305,6 +2557,7 @@ router.get('/mind/:id', async (ctx, next) => {
   let resData = {
     appName: constant.APP_NAME,
     slogan: constant.APP_SLOGAN,
+    pageInfo,
     mind
   }
   if (!ctx.state.isXhr && is_wechat) {
@@ -2599,18 +2852,113 @@ router.get('/section/:id', async (ctx, next) => {
 router.get('/classic/:id', async (ctx, next) => {
   // 查找典籍
   let classic_id = ctx.params.id
-  , classic = await Classic.findById(classic_id)
-    .select(`
-      _id title 
-      poster 
-      content 
-      mind_id 
-      creator_id 
-      column_id 
-      original_author 
-      source`)
-    .populate('mind', 'content keywords')
-    .lean()
+  , _classicId = mongoose.Types.ObjectId(classic_id)
+  , { user } = ctx.state
+  //, uid = user && user._id
+  //, quoteQuery = Mind.quoteQuery(uid)
+  , classics = await Classic.aggregate([
+    { $match: { _id: _classicId } },
+    { $lookup: {
+      from: Mind.collection.name,
+      let: { 'mid': '$mind_id' },
+      pipeline: [
+        { $match: { 
+          $expr: { $eq: [ '$_id', '$$mid' ] }
+        }},
+        Party.partyInfoQuery(),
+        { $project: {
+          _id: 1,
+          content: 1,
+          keywords: 1,
+          creator_id: 1,
+          party: { $cond : [ { $eq : ['$party', []]}, [ null ], '$party'] }
+        }},
+        { $unwind: '$party'},
+        { $project: {
+          _id: 1,
+          content: 1,
+          keywords: 1,
+          creator_id: 1,
+          party: 1
+        }},
+      ],
+      as: 'mind'
+    }},
+    { $lookup: {
+      from: Reply.collection.name,
+      let: { 'mid': '$mind_id' },
+      pipeline: [
+        { $match: { 
+          $expr: { $eq: [ '$parent_id', '$$mid' ] }
+        }},
+        // 获取公号信息
+        Party.partyInfoQuery(),
+        // 获取引用
+        //...quoteQuery,
+        { $project: {
+          _id: 1,
+          title: 1,
+          summary: 1,
+          type: 1,
+          sub_type: 1,
+          reply_type: 1,
+          parent_id: 1,
+          creator_id: 1,
+          party: { $cond : [ { $eq : ['$party', []]}, [ null ], '$party'] },
+          //quote_mind: { $cond : [ { $eq : ['$quote_mind', []]}, [ null ], '$quote_mind'] },
+          //quote_classic: { $cond : [ { $eq : ['$quote_classic', []]}, [ null ], '$quote_classic'] },
+        }},
+        { $sort: { created_date: -1 } },
+        // { $skip: skip },
+        // { $limit: limit },
+        { $unwind: '$party'},
+        //{ $unwind: '$quote_mind' },
+        //{ $unwind: '$quote_classic' },
+        { $project: {
+          _id: 1,
+          title: 1,
+          summary: 1,
+          type: 1,
+          sub_type: 1,
+          reply_type: 1,
+          creator_id: 1,
+          created_date: 1,
+          party: 1,
+          //quote: { $ifNull: [ '$quote_mind', '$quote_classic' ] },
+        }},
+      ],
+      as: 'replies'
+    }},
+    { $project: {
+      _id: 1,
+      title: 1,
+      poster: 1,
+      content: 1, 
+      mind_id: 1,
+      creator_id: 1,
+      column_id: 1,
+      original_author: 1,
+      source: 1,
+      mind: { $cond : [ { $eq : ['$mind', []]}, [ null ], '$mind'] },
+      replies: '$replies'
+    }},
+    { $unwind: '$mind'},
+    { $project: {
+      _id: 1,
+      title: 1,
+      poster: 1,
+      content: 1, 
+      mind_id: 1,
+      creator_id: 1,
+      column_id: 1,
+      original_author: 1,
+      source: 1,
+      mind: 1,
+      replies: '$replies'
+    }}
+  ])
+
+  let classic = classics && classics[0]
 
   // 标题
   ctx.state = Object.assign(ctx.state, { 
@@ -2906,7 +3254,7 @@ router.post('/uploadAudio', async (ctx, next) =>{
           let config = new qiniu.conf.Config()
           let formUploader = new qiniu.form_up.FormUploader(config)
           let putExtra = new qiniu.form_up.PutExtra()
-          let key= file.file.name
+          let key = file.file.name
 
           crypto.pseudoRandomBytes(16, function (err, raw) {
             if (err) {
@@ -2943,15 +3291,72 @@ router.post('/uploadAudio', async (ctx, next) =>{
   }
 })
 
-// 发布心念
-router.post('/mind', async (ctx) => {
+// 上传视频
+router.post('/uploadVideo', async (ctx, next) =>{
+  try {
+    let accessKey = 'tuLyXahBtm_MifuxWpTuOgYQHbygXS2Yyg5ytRNw'  // 源码删除:七牛云获取 ak,必须配置
+    let secretKey = '955YhRqvnNBrdbSc_HFEhAGrw6z2K7e43r6zWwDy'  // 源码删除:七牛云获取 sk, 必须配置
+    let mac = new qiniu.auth.digest.Mac(accessKey, secretKey)
+    let options = {
+      scope: 'tianyevideo',  // 对应七牛云存储空间名称
+      insertOnly: 1,
+      expires: 7200 //token过期时间
+    }
+    let putPolicy = new qiniu.rs.PutPolicy(options)
+    let uploadToken = putPolicy.uploadToken(mac)
+    let form = formidable.IncomingForm()
+    let {respErr, respBody, respInfo, filename} = await new Promise((resolve, reject) => {
+      form.parse(ctx.req, function (err, fields, file) {
+        if (file) {
+          let localFile = file.file.path
+          let config = new qiniu.conf.Config()
+          let formUploader = new qiniu.form_up.FormUploader(config)
+          let putExtra = new qiniu.form_up.PutExtra()
+          let key= file.file.name
+
+          crypto.pseudoRandomBytes(16, function (err, raw) {
+            if (err) {
+              reject(err)
+              return
+            }
+
+            let ext = path.extname(key)
+            key = [raw.toString('hex'), ext].join('')
+            formUploader.put(uploadToken, key, localFile, putExtra, function(respErr, respBody, respInfo) {
+              resolve({
+                respErr,
+                respBody,
+                respInfo,
+                filename: key
+              })
+            })
+          })
+        }
+      })
+    })
+    ctx.body = {
+      respErr,
+      video: `https://video.tianyeapp.top/${respBody.key}`,//在七牛云上配置域名
+      hash: respBody.hash,
+      status: respInfo.statusCode,
+      filename: respBody.key
+    }
+  } catch (err) {
+    ctx.body = {
+      success: false,
+      info: err.message || '上传音频失败'
+    }
+  }
+})
+
+// 发布心念并注册
+router.post('/newmind', async (ctx) => {
   const body = ctx.request.body || {}
-  , { user } = ctx.state
-  , { column_id, content } = body
+  , { type_id, column_id, content } = body
   , contentClearly = clearFormat(content)
-  , contentLength = (
+  , contentLength = 
     contentClearly 
-    && contentClearly.replace('/\n|\r|\t/gm', '').trim()).length
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim().length
   , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
   , is_extract = contentLength > sentenceMaxLength
   let info = ''
@@ -2969,6 +3374,83 @@ router.post('/mind', async (ctx) => {
     body.summary = Mind.extract(contentClearly)
   } else {
     body.summary = contentClearly
+  }
+  // 注册账号
+  let password = phoneToken(6, {type: 'string'})
+  , buf = await crypto.randomBytes(32)
+  , salt = buf.toString('hex')
+  , hash = await pbkdf2(password, salt)
+  , username = shortid.generate()
+  let newUser = await User.create({
+    username,
+    hash: new Buffer(hash, 'binary').toString('hex'),
+    salt: salt
+  })
+  let party = await Party.create({
+    name: username,
+    creator_id: newUser._id
+  })
+  if (type_id === 'share') {
+    body.party_id = party && party._id
+  }
+  body.creator_id = newUser._id
+  body.keywords = [...new Set(
+    body.keywords 
+    && body.keywords.trim().split(/\s+/) 
+    || [])
+  ]
+  try {
+    let newMind = await Mind.create(body)
+    , docs = body.keywords && body.keywords.map(item => ({ 
+      name: item,
+      mind_id: newMind._id,
+      creator_id: newUser._id
+    }))
+    await Keyword.insertMany(docs)
+    await ctx.login(newUser)
+    ctx.body = {
+      success: true,
+      user: newUser
+    }
+  } catch (err) {
+    info = err.message
+    ctx.body = {
+      success: false,
+      info
+    }
+  }
+})
+
+// 发布心念
+router.post('/mind', async (ctx) => {
+  const body = ctx.request.body || {}
+  , { user } = ctx.state
+  , { type_id, column_id, content } = body
+  , contentClearly = clearFormat(content)
+  , contentLength = 
+    contentClearly 
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim().length
+  , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
+  , is_extract = contentLength > sentenceMaxLength
+  let info = ''
+  // 超过限制字数没有使用文章格式
+  if (is_extract) {
+    if (column_id === constant.COLUMNS.SENTENCE.id) {
+      info = `句子内容不能超过${sentenceMaxLength}个字。`
+      ctx.body = {
+        success: false,
+        info
+      }
+      return
+    }
+    // 提取摘要
+    body.summary = Mind.extract(contentClearly)
+  } else {
+    body.summary = contentClearly
+  }
+  let party = await Party.findOne({ creator_id: user._id }, '_id')
+  if (type_id === 'share') {
+    body.party_id = party && party._id
   }
   body.creator_id = user._id
   body.keywords = [...new Set(
@@ -3069,9 +3551,9 @@ router.post('/classic', async (ctx) => {
     && reason.replace 
     && reason.replace(/\r|\n|\t/gm, '').trim()
   , contentClearly = clearFormat(content)
-  , contentLength = (
+  , contentLength = 
     contentClearly 
-    && contentClearly.replace('/\n|\r|\t/gm', '').trim()).length
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim().length
   , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
   , is_extract = contentLength > sentenceMaxLength
   // 推荐理由不能超过147个字符
@@ -3097,7 +3579,6 @@ router.post('/classic', async (ctx) => {
   } else {
     body.summary = contentClearly
   }
-  console.log(body.summary)
   body.creator_id = user._id
   let keywordsArr = keywords 
   && keywords.trim 
@@ -3123,12 +3604,15 @@ router.post('/classic', async (ctx) => {
     }))
     newClassic.mind_id = newMind._id
     newMind.ref_id = newClassic._id
+    let party = await Party.findOne({ creator_id: user._id }, '_id')
+    party && (newMind.party_id = party._id)
     await newClassic.save()
     await newMind.save()
     // 存储关键词
     await Keyword.insertMany(docs)
     ctx.body = {
       success: true,
+      works_id: newClassic._id
     }
   } catch (err) {
     ctx.body = {
@@ -3396,31 +3880,41 @@ router.delete('/thank/:mindId', async (ctx, next) => {
 
 // 回复
 router.post('/:type/:id/reply', async (ctx, next) => {
-  const { 
-    content, 
-    parent_id, 
-    parent_type,
-    receiver_id,
-    ref_id,
-    ref_type
-  } = ctx.request.body
-  let { type, id } = ctx.params
+  const body = ctx.request.body || {}
+  , { type, id } = ctx.params
+  , { user } = ctx.state
+  , { column_id, content, parent_id } = body
+  , contentClearly = clearFormat(content)
+  , contentLength = 
+    contentClearly 
+    && contentClearly.replace('/\n|\r|\t/gm', '').trim().length
+  , sentenceMaxLength = constant.SUMMARY_LIMIT - 3
+  , is_extract = contentLength > sentenceMaxLength
+  // 超过限制字数没有使用文章格式
+  if (is_extract) {
+    if (column_id === constant.COLUMNS.SENTENCE.id) {
+      info = `句子内容不能超过${sentenceMaxLength}个字。`
+      ctx.body = {
+        success: false,
+        info
+      }
+      return
+    }
+    // 提取摘要
+    body.summary = Mind.extract(contentClearly)
+  } else {
+    body.summary = contentClearly
+  }
+  body.type = 'text'
+  body.sub_type = 'text'
+  body.reply_id = id
+  body.reply_type = type
+  body.creator_id = user._id
+  let party = await Party.findOne({ creator_id: user._id }, '_id')
+  body.party_id = party && party._id
   try {
-    let reply = await Reply.create({
-      type: 'text',
-      sub_type: 'text',
-      content, 
-      reply_id: id,
-      reply_type: type,
-      parent_id,
-      parent_type,
-      creator_id: ctx.state.user.id,
-      receiver_id,
-      ref_id,
-      ref_type
-    })
-
-    let now = new Date()
+    let reply = await Reply.create(body)
+    , now = new Date()
 
     // 更新回复时间
     await Mind.updateOne(

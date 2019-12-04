@@ -4,6 +4,8 @@
   margin-top: 20px;
 }
 .content {
+  overflow: hidden;
+  position: relative;
   h1 {
     font-size: 24px;
     line-height: 42px;
@@ -11,7 +13,38 @@
     font-weight: 500;
     margin-top: 30px;;
   }
-
+  .more-text {
+    position: absolute;
+    height: 28px;
+    line-height: 28px;
+    bottom: 0;
+    width: 80px;
+    text-align: center;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    font-size: 14px;
+    color: #999999;
+    overflow: hidden;
+    cursor: pointer;
+    span {
+      float: left;
+    }
+    i {
+      float: right;
+      transform: rotate(-90deg)
+    }
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .more-mask {
+    background-image: linear-gradient(-180deg,hsla(0,0%,100%,0),#fff);
+    position: absolute;
+    height: 105px;
+    bottom: 0;
+    width: 100%;
+    z-index: 999;
+  }
   .content-header {
     overflow: hidden;
     margin-top: 20px;
@@ -19,10 +52,12 @@
       width: 90px;
       height: 110px;
       float: left;
+      margin-top: 10px;
     }
     .content-info {
       float: left;
       margin-left: 20px;
+      width: calc(100% - 110px);
       h1 {
         text-align: left;
         margin-top: 0;
@@ -52,13 +87,6 @@
     color: lighten($gray, 60%);
   }
 
-  .more-mask {
-    background-image: linear-gradient(-180deg,rgba(255,255,255,0) 0,#fff 100%);
-    position: absolute;
-    height: 150px;
-    width: 100%;
-  }
-
   .content-viewer {
     font-size: 16px;
     margin-top: 20px;
@@ -71,6 +99,7 @@
   padding: 0;
   .item {
     overflow: hidden;
+    border-bottom: 1px solid #eaeaea;
     > a {
       float: left;
       font-size: 16px;
@@ -99,4 +128,46 @@
 
 .pagination {
   margin-top: 20px;
+}
+
+.reply {
+  margin-top: 20px;
+  padding: 10px;
+  textarea {
+    height: 60px;
+  }
+  button {
+    margin-top: 10px;
+  }
+  .form-group {
+    position: relative;
+    overflow: hidden;
+    .login-area {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      text-align: center;
+      padding-top: 12px;
+      background-color: #ffffff;
+      opacity: 0.6;
+      a {
+        text-decoration: underline;
+      }
+    }
+  }
+  .list {
+    margin-top: 20px;
+    .item {
+      .bottom-bar {
+        font-size: 14px;
+        color: #999999;
+        padding: 10px 0;
+      }
+      div.party-name {
+        float: left;
+      }
+    }
+  }
 }

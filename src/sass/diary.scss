@@ -1,5 +1,74 @@
 @import '@/sass/common/common.scss';
+.mind-header {
+  padding: 10px;
+  a {
+    margin-right: 50px;
+  }
+}
+.tags {
+  padding: 10px 10px;
+  overflow: hidden;
+  .categorys, .keyword-list {
+    overflow: hidden;
+    width: calc(100% + 10px);
+    margin-right: -10px;
+    a {
+      display: block;
+      float: left;
+      font-size: 14px;
+      line-height: 24px;
+      text-align: center;
+      padding: 3px 15px;
+      border-radius: 3px;
+      margin-bottom: 15px;
+      margin-right: 10px;
+      box-sizing: border-box;
+      min-height: 31px;
+      &.active {
+        background: #f2f2f2;
+        color: #666666;
+        font-weight: 500;
+        i {
+          margin-left: 6px;
+          font-size: 12px;
+          display: inline-block;
+          line-height: 24px;
+          text-align: center;
+          width: 24px;
+          height: 24px;
+        }
+      }
+    }
+  }
+  .keyword-list {
+    height: calc(100% + 10px);
+    margin-bottom: -10px;
+    a {
+      &.active {
+        padding: 3px 5px 3px 10px;
+      }
+    }
+  }
+  .show-more {
+    font-size: 14px;
+    color: #999999;
+    width: 120px;
+    margin: 10px auto 0;
+    cursor: pointer;
+    overflow: hidden;
+    span {
+      float: left;
+    }
+    i {
+      float: right;
+      transform: rotate(-90deg)
+    }
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+}
 ol.list {
+  margin-top: 10px;
   > li.item {
     .datetime {
       font-style: normal;
@@ -9,5 +78,9 @@ ol.list {
       line-height: 12px;
       padding: 10px;
     }
+  }
+  .no-data {
+    text-align: center;
+    color: #999999;
   }
 }
