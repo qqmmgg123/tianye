@@ -76,7 +76,7 @@
     "pump": "^3.0.0",
     "remove": "^0.1.5",
     "run-sequence": "^2.2.1",
-    "striptags": "^3.1.1",
+    "striptags": "^3.2.0",
     "vinyl-buffer": "^1.0.1",
     "vinyl-named": "^1.1.0",
     "vinyl-source-stream": "^2.0.0",
